@@ -1,0 +1,40 @@
+-- =====================================================================
+-- Planification cron (à exécuter UNE FOIS dans le SQL Editor Supabase,
+-- après avoir remplacé les 2 placeholders ci-dessous) :
+--   VOTRE-PROJET  -> ref du projet (Settings > General)
+--   VOTRE_CLE_ANON -> clé anon (Settings > API)
+-- Prérequis : extensions pg_cron et pg_net activées (Database > Extensions).
+-- =====================================================================
+
+create extension if not exists pg_cron;
+create extension if not exists pg_net;
+
+-- 1. Séquence d'emails : toutes les 15 minutes
+select cron.schedule(
+  'send-emails-tick',
+  '*/15 * * * *',
+  $$
+  select net.http_post(
+    url := 'https://VOTRE-PROJET.supabase.co/functions/v1/send-emails',
+    headers := '{"Content-Type": "application/json", "Authorization": "Bearer VOTRE_CLE_ANON"}'::jsonb,
+    body := '{}'::jsonb
+  );
+  $$
+);
+
+-- 2. Mise à jour du référentiel salaires : chaque lundi à 06h00 UTC
+select cron.schedule(
+  'update-benchmarks-weekly',
+  '0 6 * * 1',
+  $$
+  select net.http_post(
+    url := 'https://VOTRE-PROJET.supabase.co/functions/v1/update-benchmarks',
+    headers := '{"Content-Type": "application/json", "Authorization": "Bearer VOTRE_CLE_ANON"}'::jsonb,
+    body := '{}'::jsonb,
+    timeout_milliseconds := 120000
+  );
+  $$
+);
+
+-- Pour vérifier : select * from cron.job;
+-- Pour supprimer : select cron.unschedule('send-emails-tick');

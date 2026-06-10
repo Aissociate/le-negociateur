@@ -1,0 +1,135 @@
+// Webhook Stripe : à la confirmation du paiement, marque la commande payée,
+// arrête la séquence email du lead, puis génère le Kit personnalisé (IA) en
+// arrière-plan et l'envoie par email. La réponse 200 part immédiatement pour
+// rester sous le timeout Stripe ; la génération continue via waitUntil.
+
+import Stripe from 'npm:stripe@16';
+import { serviceClient } from '../_shared/db.ts';
+import { callLLM } from '../_shared/llm.ts';
+import { sendEmail } from '../_shared/email.ts';
+
+const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, { apiVersion: '2024-06-20' });
+const cryptoProvider = Stripe.createSubtleCryptoProvider();
+
+Deno.serve(async (req) => {
+  const signature = req.headers.get('stripe-signature');
+  const body = await req.text();
+
+  let event: Stripe.Event;
+  try {
+    event = await stripe.webhooks.constructEventAsync(
+      body,
+      signature!,
+      Deno.env.get('STRIPE_WEBHOOK_SECRET')!,
+      undefined,
+      cryptoProvider
+    );
+  } catch (err) {
+    console.error('Signature webhook invalide', err);
+    return new Response('Bad signature', { status: 400 });
+  }
+
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object as Stripe.Checkout.Session;
+    // deno-lint-ignore no-explicit-any
+    (globalThis as any).EdgeRuntime?.waitUntil?.(fulfill(session)) ?? (await fulfill(session));
+  }
+
+  return new Response(JSON.stringify({ received: true }), {
+    headers: { 'Content-Type': 'application/json' },
+  });
+});
+
+async function fulfill(session: Stripe.Checkout.Session): Promise<void> {
+  const db = serviceClient();
+
+  // 1. Commande payée (idempotent : si déjà un livrable, on ne régénère pas)
+  const { data: order } = await db
+    .from('orders')
+    .select('*')
+    .eq('stripe_session_id', session.id)
+    .maybeSingle();
+  if (!order) {
+    console.error(`Commande introuvable pour la session ${session.id}`);
+    return;
+  }
+  const { data: existing } = await db
+    .from('deliverables')
+    .select('id')
+    .eq('order_id', order.id)
+    .maybeSingle();
+  if (existing) return;
+
+  await db
+    .from('orders')
+    .update({ status: 'paid', paid_at: new Date().toISOString() })
+    .eq('id', order.id);
+
+  // 2. Lead + dernier rapport (pour personnaliser le Kit)
+  const { data: lead } = order.lead_id
+    ? await db.from('leads').select('*').eq('id', order.lead_id).maybeSingle()
+    : await db.from('leads').select('*').eq('email', order.email).maybeSingle();
+
+  if (lead) {
+    // Stop séquence de vente : le lead est devenu client
+    await db
+      .from('leads')
+      .update({ statut: 'client', next_email_at: null })
+      .eq('id', lead.id);
+  }
+
+  const { data: report } = lead?.last_report_id
+    ? await db.from('gap_reports').select('*').eq('id', lead.last_report_id).maybeSingle()
+    : { data: null };
+
+  // 3. Génération du Kit (IA)
+  const vars = {
+    poste: report?.poste ?? lead?.poste ?? 'Cadre',
+    secteur: report?.secteur ?? lead?.secteur ?? 'Tous secteurs',
+    seniorite: report?.seniorite ?? lead?.seniorite ?? 'Confirmé (3-8 ans)',
+    localisation: report?.localisation ?? lead?.localisation ?? 'France',
+    remuneration: report?.remuneration_actuelle ?? lead?.remuneration_actuelle ?? 0,
+    market_low: report?.market_low ?? 0,
+    market_median: report?.market_median ?? 0,
+    market_high: report?.market_high ?? 0,
+    gap_annual: report?.gap_annual ?? 0,
+    gap_percent: report?.gap_percent ?? 0,
+    segment: report?.segment ?? 'inconnu',
+  };
+
+  let content: string;
+  try {
+    content = (await callLLM(db, 'kit_offensif', vars)).text;
+  } catch (err) {
+    console.error('Génération du Kit échouée', err);
+    content =
+      `# Kit de Négociation Offensif\n\nVotre Kit personnalisé est en cours de préparation. ` +
+      `Notre équipe a été alertée et vous le recevrez par email sous 24 h. ` +
+      `En cas de question : répondez simplement à l'email de confirmation.`;
+  }
+
+  // 4. Livrable + email de livraison
+  const token = crypto.randomUUID().replaceAll('-', '') + crypto.randomUUID().replaceAll('-', '');
+  await db.from('deliverables').insert({
+    order_id: order.id,
+    lead_id: lead?.id ?? null,
+    type: 'kit_offensif',
+    content_md: content,
+    access_token: token,
+  });
+
+  const siteUrl = Deno.env.get('SITE_URL') ?? 'http://localhost:5173';
+  try {
+    await sendEmail(
+      order.email,
+      'Votre Kit de Négociation Offensif est prêt',
+      `<p>Bonjour,</p>
+       <p>Merci pour votre confiance. Votre <strong>Kit de Négociation Offensif</strong> personnalisé est prêt :</p>
+       <p><a href="${siteUrl}/kit/document/${token}" style="display:inline-block;background:#c9a227;color:#10141a;padding:12px 24px;border-radius:8px;font-weight:bold;text-decoration:none">Accéder à mon Kit</a></p>
+       <p>Depuis cette page, le bouton « Télécharger en PDF » vous permet d'enregistrer votre exemplaire.</p>
+       <p>Bonne négociation,<br/>Le Négociateur</p>`
+    );
+  } catch (err) {
+    console.error("Envoi de l'email de livraison échoué", err);
+  }
+}
