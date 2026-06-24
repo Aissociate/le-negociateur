@@ -1,8 +1,7 @@
-// Agent "Mise à jour benchmarks" : exécuté par cron chaque semaine.
-// Sélectionne les lignes les plus anciennes du référentiel, demande au LLM des
-// valeurs actualisées (JSON strict), et dépose les propositions dans
-// `benchmark_updates` (statut pending). RIEN n'est appliqué sans validation
-// humaine dans /admin/benchmarks — conformité « chiffres sourcés ».
+// Agent "Curation référentiel" : exécuté par cron chaque semaine. Sélectionne
+// les lignes les plus anciennes, demande au LLM des valeurs actualisées (JSON
+// strict), et dépose les propositions dans `benchmark_updates` (statut pending).
+// RIEN n'est appliqué sans validation humaine dans /admin/benchmarks.
 
 import { serviceClient } from '../_shared/db.ts';
 import { json } from '../_shared/cors.ts';
@@ -15,6 +14,7 @@ interface Proposal {
   salaire_bas: number;
   salaire_median: number;
   salaire_haut: number;
+  tension_score?: number;
   justification: string;
 }
 
@@ -31,7 +31,7 @@ Deno.serve(async (_req) => {
   const lines = batch
     .map(
       (b) =>
-        `${b.id} | ${b.intitule} | ${b.seniorite} | ${b.localisation} | bas=${b.salaire_bas} median=${b.salaire_median} haut=${b.salaire_haut} (maj ${b.updated_at?.slice(0, 10)})`
+        `${b.id} | ${b.intitule} | ${b.seniorite} | ${b.localisation} | bas=${b.salaire_bas} median=${b.salaire_median} haut=${b.salaire_haut} tension=${b.tension_score} (maj ${b.updated_at?.slice(0, 10)})`
     )
     .join('\n');
 
@@ -50,7 +50,8 @@ Deno.serve(async (_req) => {
   for (const p of proposals) {
     if (!validIds.has(p.id)) continue;
     const current = batch.find((b) => b.id === p.id)!;
-    // Garde-fou : on ignore les valeurs aberrantes (> ±20% de variation) ou incohérentes
+
+    // Garde-fou : on ignore les valeurs aberrantes (> ±20 %) ou incohérentes
     const sane =
       [p.salaire_bas, p.salaire_median, p.salaire_haut].every(
         (v) => Number.isFinite(v) && v > 15000 && v < 500000
@@ -60,16 +61,15 @@ Deno.serve(async (_req) => {
       Math.abs(p.salaire_median - current.salaire_median) / current.salaire_median <= 0.2;
     if (!sane) continue;
 
-    // Pas de variation -> pas de proposition (on rafraîchit juste la date)
-    if (
-      p.salaire_bas === current.salaire_bas &&
-      p.salaire_median === current.salaire_median &&
-      p.salaire_haut === current.salaire_haut
-    ) {
-      await db
-        .from('salary_benchmarks')
-        .update({ updated_at: new Date().toISOString() })
-        .eq('id', p.id);
+    const tensionChanged =
+      Number.isFinite(p.tension_score) && p.tension_score !== current.tension_score;
+    const valuesChanged =
+      p.salaire_bas !== current.salaire_bas ||
+      p.salaire_median !== current.salaire_median ||
+      p.salaire_haut !== current.salaire_haut;
+
+    if (!valuesChanged && !tensionChanged) {
+      await db.from('salary_benchmarks').update({ updated_at: new Date().toISOString() }).eq('id', p.id);
       continue;
     }
 
@@ -79,15 +79,12 @@ Deno.serve(async (_req) => {
         salaire_bas: Math.round(p.salaire_bas),
         salaire_median: Math.round(p.salaire_median),
         salaire_haut: Math.round(p.salaire_haut),
+        ...(tensionChanged ? { tension_score: Math.round(p.tension_score as number) } : {}),
         justification: p.justification ?? '',
       },
       status: 'pending',
     });
-    // La date de revue est rafraîchie pour faire tourner le batch hebdomadaire
-    await db
-      .from('salary_benchmarks')
-      .update({ updated_at: new Date().toISOString() })
-      .eq('id', p.id);
+    await db.from('salary_benchmarks').update({ updated_at: new Date().toISOString() }).eq('id', p.id);
     proposed++;
   }
 

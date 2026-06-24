@@ -1,7 +1,7 @@
 // Webhook Stripe : à la confirmation du paiement, marque la commande payée,
-// arrête la séquence email du lead, puis génère le Kit personnalisé (IA) en
-// arrière-plan et l'envoie par email. La réponse 200 part immédiatement pour
-// rester sous le timeout Stripe ; la génération continue via waitUntil.
+// arrête la séquence email du lead (devenu client), génère le Kit personnalisé
+// (IA) et l'envoie par email. La réponse 200 part immédiatement (waitUntil) pour
+// rester sous le timeout Stripe.
 
 import Stripe from 'npm:stripe@16';
 import { serviceClient } from '../_shared/db.ts';
@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
 async function fulfill(session: Stripe.Checkout.Session): Promise<void> {
   const db = serviceClient();
 
-  // 1. Commande payée (idempotent : si déjà un livrable, on ne régénère pas)
+  // 1. Commande payée (idempotent : si un livrable existe déjà, on ne régénère pas)
   const { data: order } = await db
     .from('orders')
     .select('*')
@@ -71,11 +71,7 @@ async function fulfill(session: Stripe.Checkout.Session): Promise<void> {
     : await db.from('leads').select('*').eq('email', order.email).maybeSingle();
 
   if (lead) {
-    // Stop séquence de vente : le lead est devenu client
-    await db
-      .from('leads')
-      .update({ statut: 'client', next_email_at: null })
-      .eq('id', lead.id);
+    await db.from('leads').update({ statut: 'client', next_email_at: null }).eq('id', lead.id);
   }
 
   const { data: report } = lead?.last_report_id
@@ -95,6 +91,7 @@ async function fulfill(session: Stripe.Checkout.Session): Promise<void> {
     gap_annual: report?.gap_annual ?? 0,
     gap_percent: report?.gap_percent ?? 0,
     segment: report?.segment ?? 'inconnu',
+    tension: report?.metier_en_tension ? 'oui' : 'non',
   };
 
   let content: string;
@@ -103,7 +100,7 @@ async function fulfill(session: Stripe.Checkout.Session): Promise<void> {
   } catch (err) {
     console.error('Génération du Kit échouée', err);
     content =
-      `# Kit de Négociation Offensif\n\nVotre Kit personnalisé est en cours de préparation. ` +
+      `# Kit de Négociation\n\nVotre Kit personnalisé est en cours de préparation. ` +
       `Notre équipe a été alertée et vous le recevrez par email sous 24 h. ` +
       `En cas de question : répondez simplement à l'email de confirmation.`;
   }
@@ -122,9 +119,9 @@ async function fulfill(session: Stripe.Checkout.Session): Promise<void> {
   try {
     await sendEmail(
       order.email,
-      'Votre Kit de Négociation Offensif est prêt',
+      'Votre Kit de Négociation est prêt',
       `<p>Bonjour,</p>
-       <p>Merci pour votre confiance. Votre <strong>Kit de Négociation Offensif</strong> personnalisé est prêt :</p>
+       <p>Merci pour votre confiance. Votre <strong>Kit de Négociation</strong> personnalisé est prêt :</p>
        <p><a href="${siteUrl}/kit/document/${token}" style="display:inline-block;background:#c9a227;color:#10141a;padding:12px 24px;border-radius:8px;font-weight:bold;text-decoration:none">Accéder à mon Kit</a></p>
        <p>Depuis cette page, le bouton « Télécharger en PDF » vous permet d'enregistrer votre exemplaire.</p>
        <p>Bonne négociation,<br/>Le Négociateur</p>`

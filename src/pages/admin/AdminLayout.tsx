@@ -4,11 +4,15 @@ import { supabase } from '../../lib/supabase';
 
 const NAV = [
   { to: '/admin', label: 'Tableau de bord', end: true },
-  { to: '/admin/leads', label: 'Leads' },
+  { to: '/admin/leads', label: 'Leads (CRM)' },
+  { to: '/admin/prospection', label: 'Prospection' },
   { to: '/admin/benchmarks', label: 'Base salaires' },
+  { to: '/admin/products', label: 'Produits & prix' },
+  { to: '/admin/ab', label: 'A/B copy' },
   { to: '/admin/prompts', label: 'IA & Prompts' },
   { to: '/admin/emails', label: 'Séquence emails' },
   { to: '/admin/orders', label: 'Commandes' },
+  { to: '/admin/orchestration', label: 'Orchestration' },
 ];
 
 export default function AdminLayout() {

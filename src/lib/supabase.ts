@@ -33,3 +33,19 @@ export async function getFunction<T>(name: string, params: Record<string, string
   if (!res.ok) throw new Error(json.error ?? `Erreur ${res.status}`);
   return json as T;
 }
+
+/** Appel POST vers une Edge Function réservée admin : passe l'access_token de l'admin connecté. */
+export async function callAdminFunction<T>(name: string, body: unknown): Promise<T> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const token = session?.access_token ?? anonKey;
+  const res = await fetch(`${functionsUrl}/${name}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error ?? `Erreur ${res.status}`);
+  return json as T;
+}

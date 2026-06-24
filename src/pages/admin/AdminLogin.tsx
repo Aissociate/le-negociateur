@@ -43,10 +43,7 @@ export default function AdminLogin() {
           className="w-full rounded-lg border border-ink/20 px-4 py-3 bg-white"
         />
         {error && <p className="text-ember text-sm font-semibold">{error}</p>}
-        <button
-          disabled={loading}
-          className="w-full bg-ink text-paper font-bold py-3 rounded-lg disabled:opacity-50"
-        >
+        <button disabled={loading} className="w-full bg-ink text-paper font-bold py-3 rounded-lg disabled:opacity-50">
           {loading ? 'Connexion…' : 'Se connecter'}
         </button>
       </form>

@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase';
 import type { EmailEvent, EmailSequence } from '../../types';
 
 /**
- * Sequence de 4 emails de vente du Kit. Editables : delai, objet, corps HTML.
+ * Séquence d'emails de vente du Kit. Éditables : délai, objet, corps HTML.
  * Variables : {{poste}}, {{gap_annual}}, {{gap_percent}}, {{kit_url}}, {{report_url}}.
  */
 export default function Emails() {
@@ -12,11 +12,7 @@ export default function Emails() {
   const [saved, setSaved] = useState('');
 
   useEffect(() => {
-    supabase
-      .from('email_sequences')
-      .select('*')
-      .order('step')
-      .then(({ data }) => setSeq((data as EmailSequence[]) ?? []));
+    supabase.from('email_sequences').select('*').order('step').then(({ data }) => setSeq((data as EmailSequence[]) ?? []));
     supabase
       .from('email_events')
       .select('*')
@@ -44,11 +40,11 @@ export default function Emails() {
 
   return (
     <div className="max-w-4xl">
-      <h1 className="font-display text-3xl font-bold mb-2">Séquence emails (4 envois)</h1>
+      <h1 className="font-display text-3xl font-bold mb-2">Séquence emails</h1>
       <p className="text-paper/60 text-sm mb-8">
-        Déclenchée à la capture du lead. Variables disponibles :{' '}
-        <code className="text-gold">{'{{poste}} {{gap_annual}} {{gap_percent}} {{kit_url}} {{report_url}}'}</code>.
-        Le cron d'envoi tourne toutes les 15 minutes ; la séquence s'arrête automatiquement à l'achat.
+        Déclenchée à la capture du lead. Variables :{' '}
+        <code className="text-gold">{'{{poste}} {{gap_annual}} {{gap_percent}} {{kit_url}} {{report_url}}'}</code>. Le
+        cron d'envoi tourne toutes les 15 minutes ; la séquence s'arrête automatiquement à l'achat.
       </p>
       {saved && <p className="mb-4 text-gold font-semibold">{saved}</p>}
 
@@ -68,11 +64,7 @@ export default function Emails() {
                   />
                 </label>
                 <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={e.active}
-                    onChange={(ev) => update(e.id, { active: ev.target.checked })}
-                  />
+                  <input type="checkbox" checked={e.active} onChange={(ev) => update(e.id, { active: ev.target.checked })} />
                   Actif
                 </label>
               </div>
@@ -89,10 +81,7 @@ export default function Emails() {
               onChange={(ev) => update(e.id, { body_html: ev.target.value })}
               className="w-full bg-ink border border-paper/20 rounded-lg px-3 py-2 text-sm font-mono"
             />
-            <button
-              onClick={() => save(e)}
-              className="bg-gold text-ink font-bold px-5 py-2 rounded-lg text-sm"
-            >
+            <button onClick={() => save(e)} className="bg-gold text-ink font-bold px-5 py-2 rounded-lg text-sm">
               Enregistrer
             </button>
           </div>
@@ -114,9 +103,7 @@ export default function Emails() {
             <tr key={ev.id} className="border-b border-paper/5">
               <td className="py-2 pr-4">{new Date(ev.sent_at).toLocaleString('fr-FR')}</td>
               <td className="py-2 pr-4">Email {ev.step}</td>
-              <td className={`py-2 pr-4 ${ev.status === 'error' ? 'text-ember' : 'text-gold'}`}>
-                {ev.status}
-              </td>
+              <td className={`py-2 pr-4 ${ev.status === 'error' ? 'text-ember' : 'text-gold'}`}>{ev.status}</td>
               <td className="py-2 text-paper/60">{ev.error ?? '—'}</td>
             </tr>
           ))}

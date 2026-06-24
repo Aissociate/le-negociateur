@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { CheckCircle2 } from 'lucide-react';
+import Layout from '../components/Layout';
 import { getFunction } from '../lib/supabase';
+import { CAPTURE_EXPERIMENT, assignVariant, trackAB } from '../lib/ab';
 
 export default function Merci() {
   const [params] = useSearchParams();
@@ -18,6 +20,8 @@ export default function Merci() {
           order_session: sessionId,
         });
         if (res.token) {
+          // Conversion : on attribue l'achat à la variante A/B du visiteur.
+          trackAB(CAPTURE_EXPERIMENT.key, assignVariant(CAPTURE_EXPERIMENT).key, 'purchase');
           setKitUrl(`/kit/document/${res.token}`);
           return;
         }
@@ -30,30 +34,29 @@ export default function Merci() {
   }, [sessionId, kitUrl, tries]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-6">
-      <div className="max-w-lg text-center">
+    <Layout narrow>
+      <div className="text-center py-16">
         <CheckCircle2 className="mx-auto text-gold mb-6" size={56} />
         <h1 className="font-display text-3xl font-bold mb-4">Paiement confirmé. Bienvenue.</h1>
-        <p className="text-paper/80 mb-8">
-          Votre <strong>Kit de Négociation Offensif</strong> est en cours de génération
-          personnalisée. Vous recevrez également le lien par email.
+        <p className="text-paper/80 mb-8 max-w-lg mx-auto">
+          Votre <strong>Kit de Négociation</strong> est en cours de génération personnalisée. Vous recevrez aussi le
+          lien par email.
         </p>
         {kitUrl ? (
           <Link
             to={kitUrl}
-            className="inline-block bg-gold text-ink font-bold px-8 py-4 rounded-lg hover:bg-gold/90 transition"
+            className="inline-block bg-gold text-ink font-bold px-8 py-4 rounded-lg hover:brightness-105 transition"
           >
             Accéder à mon Kit →
           </Link>
         ) : tries > 20 ? (
           <p className="text-paper/60 text-sm">
-            La génération prend plus de temps que prévu — le lien arrive par email d'ici quelques
-            minutes.
+            La génération prend plus de temps que prévu — le lien arrive par email d'ici quelques minutes.
           </p>
         ) : (
           <p className="text-paper/60 animate-pulse">Génération en cours…</p>
         )}
       </div>
-    </div>
+    </Layout>
   );
 }

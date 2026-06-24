@@ -1,17 +1,26 @@
 # Le Négociateur
 
-Funnel de vente complet pour cadres : analyse gratuite du positionnement salarial (capture email) → séquence de 4 emails → **Kit de Négociation Offensif** (PDF payant, généré par IA) — avec back-office admin (IA, prompts, référentiel salaires, leads, emails, commandes).
+Plateforme de génération de leads et de vente pour cadres / CSP+ : un tunnel de conversion
+qui révèle, par IA, l'écart entre le salaire de l'utilisateur et le marché, puis vend un
+**Kit de Négociation** personnalisé — le tout piloté par un back-office complet (CRM, IA, prix,
+A/B, prospection sortante, orchestration).
 
-> Architecture détaillée : voir [PLAN-ARCHITECTURE.md](PLAN-ARCHITECTURE.md). Stack : **Vite + React + TypeScript + Tailwind + Supabase + Stripe + OpenRouter + Resend** — compatible **Bolt.new** (l'app tourne sur Netlify + Supabase).
+> Pitch : **« Êtes-vous assez payé pour ce que vous savez faire ? Votre patron dirait oui. »**
 
-## Le funnel
+Stack : **Vite + React + TypeScript + Tailwind + Supabase (Postgres/Auth/Edge Functions/Cron) +
+Stripe + OpenRouter + Resend + Apify**. Architecture détaillée : [ROADMAP.md](ROADMAP.md). Conformité :
+[CONFORMITE.md](CONFORMITE.md).
 
-1. **`/` Vitrine** — formulaire (poste, secteur, séniorité, localisation, salaire, email + consentement RGPD).
-2. **`/rapport/:id`** — rapport d'écart chiffré (référentiel + coefficient sectoriel) + analyse IA, CTA vers le Kit.
-3. **Séquence de 4 emails** (cron 15 min) — J0 analyse, J+2 coût de l'inaction, J+4 objections, J+7 garantie. S'arrête à l'achat.
-4. **`/kit`** — page de vente (79 €) → Stripe Checkout hébergé.
-5. **`/merci` + `/kit/document/:token`** — webhook Stripe → génération IA du Kit personnalisé → livraison email + page imprimable en PDF.
-6. **`/admin`** — tableau de bord, leads, **base salaires** (validation des MAJ hebdo proposées par l'IA), **IA & prompts** (modèle, prompts, température par agent), séquence emails, commandes.
+## Le tunnel
+
+1. **`/`** — Questionnaire multi-étapes (poste → secteur → séniorité → localisation → rému) puis
+   **capture email + consentement**, avec **A/B testing** du copywriting (`src/lib/ab.ts`).
+2. **`/rapport/:id`** — Page *reveal* : écart chiffré, positionnement marché, badge **métier en
+   tension**, analyse IA, CTA Kit.
+3. **Séquence de 4 emails** (cron) — relances jusqu'à l'achat.
+4. **`/kit`** — Page de vente (Kit **49 €** + order-bump upsell), prix lus en base → Stripe Checkout.
+5. **`/merci` → `/kit/document/:token`** — webhook Stripe → génération IA du Kit → page imprimable PDF + email.
+6. **`/admin`** — back-office (voir plus bas).
 
 ## Mise en route
 
@@ -25,46 +34,54 @@ npm run dev
 
 ### 2. Supabase
 
-1. Créer un projet Supabase (ou connecter l'intégration native dans Bolt).
-2. Appliquer les migrations : `supabase db push` (ou copier les fichiers `supabase/migrations/*.sql` dans le SQL Editor, dans l'ordre).
-3. Déployer les fonctions : `supabase functions deploy rapport-ecart public-data create-checkout stripe-webhook send-emails update-benchmarks`.
+1. Créer un projet Supabase.
+2. Appliquer les migrations (`supabase db push`, ou coller les fichiers `supabase/migrations/*.sql`
+   dans le SQL Editor, dans l'ordre).
+3. Déployer les fonctions :
+   ```bash
+   supabase functions deploy rapport-ecart public-data ab-track create-checkout stripe-webhook \
+     send-emails update-benchmarks orchestrator prospect-import prospect-ingest prospect-enrich
+   ```
 4. Renseigner les secrets (Settings → Edge Functions → Secrets) :
    - `OPENROUTER_API_KEY` — IA (modèles réglables dans `/admin/prompts`)
-   - `STRIPE_SECRET_KEY` et `STRIPE_WEBHOOK_SECRET`
-   - `RESEND_API_KEY` et `EMAIL_FROM`
+   - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
+   - `RESEND_API_KEY`, `EMAIL_FROM`
+   - `APIFY_API_KEY`, `APIFY_APOLLO_ACTOR` — agent de prospection
    - `SITE_URL` — URL publique du site
-5. Activer les crons : exécuter `supabase/cron.sql` dans le SQL Editor (remplacer les 2 placeholders).
+5. Activer les crons : exécuter `supabase/cron.sql` (remplacer les 2 placeholders).
 
 ### 3. Stripe
 
-Créer un webhook → `https://VOTRE-PROJET.supabase.co/functions/v1/stripe-webhook`, événement `checkout.session.completed`, et copier le secret `whsec_...` dans `STRIPE_WEBHOOK_SECRET`.
+Webhook → `https://VOTRE-PROJET.supabase.co/functions/v1/stripe-webhook`, événement
+`checkout.session.completed`, copier le secret `whsec_...` dans `STRIPE_WEBHOOK_SECRET`.
 
 ### 4. Compte admin
 
-1. Créer un utilisateur : Authentication → Users → « Add user » (email + mot de passe).
-2. Le passer admin :
-   ```sql
-   update public.profiles set role = 'admin' where id = 'UUID-DE-L-UTILISATEUR';
-   ```
+1. Authentication → Users → « Add user » (email + mot de passe).
+2. `update public.profiles set role = 'admin' where id = 'UUID';`
 3. Se connecter sur `/admin/login`.
 
-## Base de salaires
+## Données salaires (actif n°1)
 
-- Seed initial : 24 fonctions cadres × 4 séniorités × 3 zones = **288 lignes** (`salary_benchmarks`) + 10 coefficients sectoriels.
-- **Mise à jour hebdomadaire** : chaque lundi, l'agent `maj_benchmarks` passe en revue un lot de lignes et dépose ses propositions dans `benchmark_updates`. **Rien n'est appliqué sans validation humaine** dans `/admin/benchmarks` (conformité « chiffres sourcés »).
-- Édition manuelle possible ligne à ligne dans le même écran.
+Référentiel `salary_benchmarks` orienté **cadres CSP+ / métiers en tension** (cyber, DevOps, data,
+dev, product, R&D, supply chain…), avec **code ROME**, **score de tension** et sources publiques
+(INSEE base Tous salariés, DARES métiers en tension, APEC). Mise à jour : l'agent `maj_benchmarks`
+propose des ajustements hebdo dans `/admin/benchmarks` — **rien n'est appliqué sans validation humaine**.
 
-## Gestion des IA (back-office)
+## Back-office (`/admin`)
 
-`/admin/prompts` pilote la table `agent_config` : pour chaque agent (`analyse_ecart`, `kit_offensif`, `maj_benchmarks`), on règle **sans redéploiement** le modèle (slug OpenRouter), les prompts système/utilisateur, la température, le plafond de tokens et l'interrupteur on/off. Chaque appel est journalisé dans `agent_runs` (tokens, durée, erreurs) — visible sur le tableau de bord.
+Tableau de bord · **Leads (CRM)** · **Prospection** (Apollo via Apify) · **Base salaires** ·
+**Produits & prix** · **A/B copy** · **IA & Prompts** (OpenRouter, sans redéploiement) ·
+Séquence emails · Commandes · **Orchestration** (file `agent_jobs`).
 
-## Conformité (résumé)
+## Prospection sortante (Apollo via Apify)
 
-- Consentement explicite horodaté à la capture ; désinscription gérée (statut `desinscrit`).
-- Chiffres toujours présentés comme **estimations sourcées** ; aucun gain « garanti ».
-- Paiement exclusivement via Stripe Checkout hébergé ; aucune donnée bancaire dans l'app.
-- RLS activée sur toutes les tables ; le public ne passe que par les Edge Functions ; secrets uniquement côté serveur.
+`/admin/prospection` crée des listes, lance un **run Apify** (scraper Apollo.io), ingère le dataset,
+puis **score + génère un angle d'approche par IA**. Fonctions protégées par garde admin (JWT).
+Conformité B2B intégrée (voir [CONFORMITE.md](CONFORMITE.md)).
 
-## Import dans Bolt
+## Orchestration
 
-Pousser ce dépôt sur GitHub puis l'importer dans Bolt (`bolt.new/~/github.com/...`), ou copier les fichiers dans un projet Bolt Vite+React. Connecter ensuite les intégrations natives Supabase et Netlify, et suivre « Mise en route » ci-dessus.
+La file `agent_jobs` (ingestion Apify, enrichissement) est consommée par la fonction `orchestrator`
+(cron toutes les 2 min) : jobs courts, idempotents, repris avec backoff. Journalisation des appels IA
+dans `agent_runs` (tokens, durée), visible au tableau de bord.

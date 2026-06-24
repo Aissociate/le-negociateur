@@ -1,5 +1,5 @@
 // Lectures publiques contrôlées (les tables sont fermées côté RLS) :
-//   ?report=<uuid>          -> rapport d'écart
+//   ?report=<uuid>          -> rapport d'écart (inclut metier_en_tension)
 //   ?kit=<token>            -> livrable Kit (contenu markdown)
 //   ?order_session=<cs_...> -> { token } si le Kit de cette commande est prêt
 // Les identifiants (uuid / token aléatoires) servent de capacité d'accès.
@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
   if (kitToken) {
     const { data } = await db
       .from('deliverables')
-      .select('content_md, created_at')
+      .select('content_md, type, created_at')
       .eq('access_token', kitToken)
       .maybeSingle();
     return data ? json(data) : json({ error: 'Introuvable' }, 404);

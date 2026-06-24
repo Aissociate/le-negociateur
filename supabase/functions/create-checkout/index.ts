@@ -1,25 +1,49 @@
-// Crée une session Stripe Checkout (hébergée) pour le Kit de Négociation Offensif.
+// Crée une session Stripe Checkout (hébergée) pour le Kit (+ upsell éventuel).
+// Les prix viennent de la table `products` (pilotables depuis le back-office).
 // Aucune donnée bancaire ne transite par l'application.
 
 import Stripe from 'npm:stripe@16';
 import { serviceClient } from '../_shared/db.ts';
 import { handleOptions, json } from '../_shared/cors.ts';
 
-const KIT_PRICE_CENTS = 7900; // 79 € — modifier ici et sur la page /kit
+interface Input {
+  email: string;
+  product_slugs?: string[];
+}
 
 Deno.serve(async (req) => {
   const options = handleOptions(req);
   if (options) return options;
 
   try {
-    const { email } = (await req.json()) as { email: string };
+    const { email, product_slugs } = (await req.json()) as Input;
     if (!email?.includes('@')) return json({ error: 'Email invalide.' }, 400);
 
-    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, {
-      apiVersion: '2024-06-20',
-    });
-    const siteUrl = Deno.env.get('SITE_URL') ?? 'http://localhost:5173';
+    const slugs = product_slugs?.length ? product_slugs : ['kit'];
     const db = serviceClient();
+
+    const { data: products } = await db
+      .from('products')
+      .select('*')
+      .in('slug', slugs)
+      .eq('active', true);
+    if (!products?.length) return json({ error: 'Produit indisponible.' }, 400);
+
+    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, { apiVersion: '2024-06-20' });
+    const siteUrl = Deno.env.get('SITE_URL') ?? 'http://localhost:5173';
+
+    const lineItems = products.map((p) => ({
+      price_data: {
+        currency: p.currency ?? 'eur',
+        unit_amount: p.price_cents,
+        product_data: {
+          name: p.name,
+          description: (p.description_md ?? '').slice(0, 380) || undefined,
+        },
+      },
+      quantity: 1,
+    }));
+    const amount = products.reduce((s, p) => s + p.price_cents, 0);
 
     const { data: lead } = await db
       .from('leads')
@@ -30,20 +54,7 @@ Deno.serve(async (req) => {
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       customer_email: email,
-      line_items: [
-        {
-          price_data: {
-            currency: 'eur',
-            unit_amount: KIT_PRICE_CENTS,
-            product_data: {
-              name: 'Kit de Négociation Offensif',
-              description:
-                'Rapport personnalisé + stratégie en 5 étapes + scripts + contre-arguments (PDF)',
-            },
-          },
-          quantity: 1,
-        },
-      ],
+      line_items: lineItems,
       success_url: `${siteUrl}/merci?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl}/kit`,
     });
@@ -52,7 +63,8 @@ Deno.serve(async (req) => {
       lead_id: lead?.id ?? null,
       email: email.toLowerCase().trim(),
       stripe_session_id: session.id,
-      amount: KIT_PRICE_CENTS,
+      amount,
+      product_slugs: products.map((p) => p.slug),
       status: 'pending',
     });
 

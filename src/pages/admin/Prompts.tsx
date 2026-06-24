@@ -3,19 +3,15 @@ import { supabase } from '../../lib/supabase';
 import type { AgentConfig } from '../../types';
 
 /**
- * Gestion des IA : pour chaque agent, modele LLM (slug OpenRouter), prompts,
- * temperature, plafond de tokens, interrupteur on/off.
+ * Gestion des IA : pour chaque agent, modèle LLM (slug OpenRouter), prompts,
+ * température, plafond de tokens, interrupteur on/off. Sans redéploiement.
  */
 export default function Prompts() {
   const [configs, setConfigs] = useState<AgentConfig[]>([]);
   const [saved, setSaved] = useState('');
 
   useEffect(() => {
-    supabase
-      .from('agent_config')
-      .select('*')
-      .order('agent')
-      .then(({ data }) => setConfigs((data as AgentConfig[]) ?? []));
+    supabase.from('agent_config').select('*').order('agent').then(({ data }) => setConfigs((data as AgentConfig[]) ?? []));
   }, []);
 
   const update = (id: string, patch: Partial<AgentConfig>) =>
@@ -40,15 +36,11 @@ export default function Prompts() {
 
   return (
     <div className="max-w-4xl">
-      <h1 className="font-display text-3xl font-bold mb-2">IA & Prompts</h1>
+      <h1 className="font-display text-3xl font-bold mb-2">IA &amp; Prompts</h1>
       <p className="text-paper/60 mb-8 text-sm">
-        Chaque agent appelle OpenRouter avec le modèle et les prompts ci-dessous. Les variables{' '}
-        <code className="text-gold">{'{{poste}}'}</code>, <code className="text-gold">{'{{secteur}}'}</code>,{' '}
-        <code className="text-gold">{'{{seniorite}}'}</code>, <code className="text-gold">{'{{localisation}}'}</code>,{' '}
-        <code className="text-gold">{'{{remuneration}}'}</code>, <code className="text-gold">{'{{market_low}}'}</code>,{' '}
-        <code className="text-gold">{'{{market_median}}'}</code>, <code className="text-gold">{'{{market_high}}'}</code>,{' '}
-        <code className="text-gold">{'{{gap_annual}}'}</code>, <code className="text-gold">{'{{gap_percent}}'}</code>{' '}
-        sont remplacées automatiquement.
+        Chaque agent appelle OpenRouter avec le modèle et les prompts ci-dessous. Les variables entre{' '}
+        <code className="text-gold">{'{{...}}'}</code> (poste, secteur, marché, écart, tension…) sont remplacées
+        automatiquement à l'exécution.
       </p>
       {saved && <p className="mb-4 text-gold font-semibold">{saved}</p>}
 
@@ -58,11 +50,7 @@ export default function Prompts() {
             <div className="flex items-center justify-between">
               <h2 className="font-display text-xl font-bold">{c.label}</h2>
               <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={c.enabled}
-                  onChange={(e) => update(c.id, { enabled: e.target.checked })}
-                />
+                <input type="checkbox" checked={c.enabled} onChange={(e) => update(c.id, { enabled: e.target.checked })} />
                 Actif
               </label>
             </div>
@@ -117,10 +105,7 @@ export default function Prompts() {
                 className="w-full rounded-lg bg-ink border border-paper/20 px-3 py-2 text-sm font-mono"
               />
             </div>
-            <button
-              onClick={() => save(c)}
-              className="bg-gold text-ink font-bold px-5 py-2 rounded-lg text-sm"
-            >
+            <button onClick={() => save(c)} className="bg-gold text-ink font-bold px-5 py-2 rounded-lg text-sm">
               Enregistrer
             </button>
           </div>

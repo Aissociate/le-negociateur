@@ -1,5 +1,5 @@
-// Agent "Nurturing" : exécuté par cron toutes les 15 minutes.
-// Envoie l'email suivant de la séquence (4 emails) aux leads arrivés à échéance.
+// Agent "Nurturing" : exécuté par cron (toutes les 15 min).
+// Envoie l'email suivant de la séquence aux leads arrivés à échéance.
 // Idempotent et par lots (≤ 20 leads par tick) pour rester dans les limites Edge.
 
 import { serviceClient } from '../_shared/db.ts';
@@ -36,8 +36,7 @@ Deno.serve(async (_req) => {
     const nextStep = lead.sequence_step + 1;
     const template = sequences.find((s) => s.step === nextStep);
 
-    // Étape inexistante ou désactivée : on saute à la suivante sans envoyer
-    if (!template) {
+    const scheduleFollowing = async () => {
       const following = sequences.find((s) => s.step > nextStep);
       await db
         .from('leads')
@@ -50,6 +49,11 @@ Deno.serve(async (_req) => {
             : null,
         })
         .eq('id', lead.id);
+    };
+
+    // Étape inexistante / désactivée : on saute sans envoyer
+    if (!template) {
+      await scheduleFollowing();
       continue;
     }
 
@@ -62,7 +66,11 @@ Deno.serve(async (_req) => {
     };
 
     try {
-      await sendEmail(lead.email, renderTemplate(template.subject, vars), renderTemplate(template.body_html, vars));
+      await sendEmail(
+        lead.email,
+        renderTemplate(template.subject, vars),
+        renderTemplate(template.body_html, vars)
+      );
       await db.from('email_events').insert({ lead_id: lead.id, step: nextStep, status: 'sent' });
     } catch (err) {
       await db.from('email_events').insert({
@@ -73,19 +81,7 @@ Deno.serve(async (_req) => {
       });
     }
 
-    // Programmer l'étape suivante (basée sur la date de capture, pas la date d'envoi)
-    const following = sequences.find((s) => s.step > nextStep);
-    await db
-      .from('leads')
-      .update({
-        sequence_step: nextStep,
-        next_email_at: following
-          ? new Date(
-              new Date(lead.created_at).getTime() + following.delay_hours * 3600 * 1000
-            ).toISOString()
-          : null,
-      })
-      .eq('id', lead.id);
+    await scheduleFollowing();
     sent++;
   }
 

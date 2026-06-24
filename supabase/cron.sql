@@ -1,7 +1,7 @@
 -- =====================================================================
 -- Planification cron (à exécuter UNE FOIS dans le SQL Editor Supabase,
--- après avoir remplacé les 2 placeholders ci-dessous) :
---   VOTRE-PROJET  -> ref du projet (Settings > General)
+-- après avoir remplacé les 2 placeholders) :
+--   VOTRE-PROJET   -> ref du projet (Settings > General)
 --   VOTRE_CLE_ANON -> clé anon (Settings > API)
 -- Prérequis : extensions pg_cron et pg_net activées (Database > Extensions).
 -- =====================================================================
@@ -22,7 +22,21 @@ select cron.schedule(
   $$
 );
 
--- 2. Mise à jour du référentiel salaires : chaque lundi à 06h00 UTC
+-- 2. Orchestrateur (file agent_jobs : ingestion Apify + enrichissement) : toutes les 2 minutes
+select cron.schedule(
+  'orchestrator-tick',
+  '*/2 * * * *',
+  $$
+  select net.http_post(
+    url := 'https://VOTRE-PROJET.supabase.co/functions/v1/orchestrator',
+    headers := '{"Content-Type": "application/json", "Authorization": "Bearer VOTRE_CLE_ANON"}'::jsonb,
+    body := '{}'::jsonb,
+    timeout_milliseconds := 120000
+  );
+  $$
+);
+
+-- 3. Curation du référentiel salaires : chaque lundi à 06h00 UTC
 select cron.schedule(
   'update-benchmarks-weekly',
   '0 6 * * 1',
@@ -36,5 +50,5 @@ select cron.schedule(
   $$
 );
 
--- Pour vérifier : select * from cron.job;
--- Pour supprimer : select cron.unschedule('send-emails-tick');
+-- Vérifier : select * from cron.job;
+-- Supprimer : select cron.unschedule('send-emails-tick');

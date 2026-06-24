@@ -1,6 +1,6 @@
-// Agent "Rapport d'écart" : reçoit le formulaire de la landing, capture le lead,
-// calcule l'écart salarial à partir de `salary_benchmarks`, génère l'analyse IA,
-// programme la séquence de 4 emails, et renvoie le rapport complet.
+// Agent "Rapport d'écart" : reçoit le questionnaire, capture le lead (consentement
+// horodaté + variante A/B), calcule l'écart salarial à partir de `salary_benchmarks`,
+// génère l'analyse IA, programme la séquence d'emails, renvoie l'id du rapport.
 
 import { serviceClient } from '../_shared/db.ts';
 import { handleOptions, json } from '../_shared/cors.ts';
@@ -14,6 +14,11 @@ interface Input {
   remuneration_actuelle: number;
   email: string;
   consent: boolean;
+  ab_variant?: string;
+}
+
+function stripAccents(s: string): string {
+  return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
 Deno.serve(async (req) => {
@@ -43,17 +48,11 @@ Deno.serve(async (req) => {
       .eq('localisation', input.localisation);
     if (!benchmarks?.length) return json({ error: 'Référentiel indisponible.' }, 500);
 
-    const words = input.poste
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[̀-ͯ]/g, '')
+    const words = stripAccents(input.poste)
       .split(/\W+/)
       .filter((w) => w.length > 2);
     const scored = benchmarks.map((b) => {
-      const target = b.intitule
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[̀-ͯ]/g, '');
+      const target = stripAccents(b.intitule);
       const score = words.filter((w) => target.includes(w)).length;
       return { b, score };
     });
@@ -76,6 +75,7 @@ Deno.serve(async (req) => {
     const marketHigh = Math.round(match.salaire_haut * coef);
     const gapAnnual = marketMedian - input.remuneration_actuelle;
     const gapPercent = Math.round((gapAnnual / marketMedian) * 100);
+    const tension = !!match.metier_en_tension;
 
     const segment =
       gapPercent >= 15
@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
             ? 'aligné'
             : 'au-dessus';
 
-    // 3. Lead (upsert par email) + programmation du premier email de la séquence
+    // 3. Lead (upsert par email) + programmation du premier email
     const { data: firstEmail } = await db
       .from('email_sequences')
       .select('delay_hours')
@@ -112,6 +112,7 @@ Deno.serve(async (req) => {
           statut: 'lead',
           sequence_step: 0,
           next_email_at: nextEmailAt,
+          ab_variant: input.ab_variant ?? null,
           consent_at: new Date().toISOString(),
         },
         { onConflict: 'email' }
@@ -133,6 +134,7 @@ Deno.serve(async (req) => {
       gap_annual: gapAnnual,
       gap_percent: gapPercent,
       segment,
+      tension: tension ? 'oui' : 'non',
     };
     let analysis = '';
     try {
@@ -160,6 +162,7 @@ Deno.serve(async (req) => {
         analysis_md: analysis,
         source: match.source,
         annee: match.annee,
+        metier_en_tension: tension,
       })
       .select()
       .single();
@@ -167,7 +170,7 @@ Deno.serve(async (req) => {
 
     await db.from('leads').update({ last_report_id: report.id }).eq('id', lead.id);
 
-    return json(report);
+    return json({ report_id: report.id });
   } catch (err) {
     console.error(err);
     return json({ error: 'Erreur interne, merci de réessayer.' }, 500);
@@ -176,16 +179,17 @@ Deno.serve(async (req) => {
 
 function fallbackAnalysis(v: Record<string, string | number>): string {
   const under = Number(v.gap_annual) > 0;
+  const tension = String(v.tension) === 'oui';
   return [
     `## Votre lecture du marché`,
     under
-      ? `Pour un profil **${v.poste}** (${v.seniorite}) en ${v.localisation}, la médiane du marché se situe à **${Number(v.market_median).toLocaleString('fr-FR')} €** bruts annuels. Votre rémunération actuelle se trouve **${Math.abs(Number(v.gap_percent))}% en dessous** de cette médiane, soit un manque à gagner estimé de **${Number(v.gap_annual).toLocaleString('fr-FR')} € par an**.`
-      : `Pour un profil **${v.poste}** (${v.seniorite}) en ${v.localisation}, vous vous situez au-dessus de la médiane du marché (**${Number(v.market_median).toLocaleString('fr-FR')} €**). L'enjeu n'est plus de rattraper le marché mais de **sécuriser et valoriser** cette position lors de vos prochains entretiens.`,
+      ? `Pour un profil **${v.poste}** (${v.seniorite}) en ${v.localisation}, la médiane du marché se situe à **${Number(v.market_median).toLocaleString('fr-FR')} €** bruts annuels. Votre rémunération actuelle se trouve **${Math.abs(Number(v.gap_percent))}% en dessous** de cette médiane, soit un manque à gagner estimé de **${Number(v.gap_annual).toLocaleString('fr-FR')} € par an**.${tension ? ' Votre métier est par ailleurs **en tension** : le rapport de force vous est favorable, le marché bouge vite.' : ''}`
+      : `Pour un profil **${v.poste}** (${v.seniorite}) en ${v.localisation}, vous vous situez au-dessus de la médiane du marché (**${Number(v.market_median).toLocaleString('fr-FR')} €**). L'enjeu n'est plus de rattraper le marché mais de **sécuriser et valoriser** cette position.`,
     `## Ce que cela signifie concrètement`,
     under
       ? `- Sur 5 ans sans correction, l'écart cumulé dépasse **${(Number(v.gap_annual) * 5).toLocaleString('fr-FR')} €**, sans compter l'effet sur vos cotisations retraite et vos futures négociations (chaque salaire sert de base au suivant).\n- Cet écart est un **argument**, pas une fatalité : il se négocie, à condition d'arriver préparé, chiffres en main.`
       : `- Votre position favorable est un atout dans toute discussion : mobilité interne, promotion, ou négociation externe.\n- Le risque principal est l'érosion : sans réévaluation régulière, l'inflation et l'évolution du marché grignotent votre avance.`,
     `## La prochaine étape`,
-    `La différence entre les cadres qui obtiennent une augmentation et les autres tient rarement à la valeur — elle tient à la **méthode de négociation**. C'est exactement ce que contient le Kit de Négociation Offensif.`,
+    `La différence entre les cadres qui obtiennent une augmentation et les autres tient rarement à la valeur — elle tient à la **méthode de négociation**. C'est exactement ce que prépare Le Négociateur.`,
   ].join('\n\n');
 }
