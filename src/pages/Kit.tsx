@@ -167,12 +167,21 @@ export default function Kit() {
 
       {/* Bouclier (récurrence) — embarqué dans le Pack, abonnement dédié à venir */}
       {bouclier && (
-        <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.02] px-5 py-4 flex items-start gap-3">
-          <Repeat className="w-5 h-5 text-gold shrink-0 mt-0.5" />
-          <p className="text-sm text-paper/70">
-            <strong className="text-paper">{bouclier.name}</strong> — {bouclier.description_md} Inclus <strong>12 mois</strong> dans le
-            Pack Carrière ci-dessus ; abonnement seul ({euros(bouclier.price_cents)}/mois) bientôt disponible.
-          </p>
+        <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.02] px-5 py-4">
+          <div className="flex items-start gap-3">
+            <Repeat className="w-5 h-5 text-gold shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold">{bouclier.name} — {euros(bouclier.price_cents)}/mois</p>
+              <p className="text-xs text-paper/60">{bouclier.description_md} (inclus 12 mois dans le Pack Carrière).</p>
+            </div>
+            <button
+              onClick={() => checkout(['bouclier'])}
+              disabled={loading}
+              className="text-sm font-bold text-gold whitespace-nowrap hover:underline disabled:opacity-50"
+            >
+              S'abonner →
+            </button>
+          </div>
         </div>
       )}
 

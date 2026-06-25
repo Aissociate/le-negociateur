@@ -41,7 +41,7 @@ npm run dev
    ```bash
    supabase functions deploy rapport-ecart public-data ab-track create-checkout stripe-webhook \
      send-emails update-benchmarks orchestrator prospect-import prospect-ingest prospect-enrich \
-     salary-intel-test personalize-kit account-data interview-chat
+     salary-intel-test personalize-kit account-data interview-chat billing-portal
    ```
 4. Renseigner les secrets (Settings → Edge Functions → Secrets) :
    - `OPENROUTER_API_KEY` — IA (modèles réglables dans `/admin/prompts`)

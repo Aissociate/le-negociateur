@@ -30,10 +30,15 @@ Deno.serve(async (req) => {
     return new Response('Bad signature', { status: 400 });
   }
 
+  // deno-lint-ignore no-explicit-any
+  const er = (globalThis as any).EdgeRuntime;
+  const run = async (p: Promise<unknown>) => (er?.waitUntil ? er.waitUntil(p) : await p);
+
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session;
-    // deno-lint-ignore no-explicit-any
-    (globalThis as any).EdgeRuntime?.waitUntil?.(fulfill(session)) ?? (await fulfill(session));
+    await run(session.mode === 'subscription' ? fulfillSubscription(session) : fulfill(session));
+  } else if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
+    await updateSubscriptionStatus(event.data.object as Stripe.Subscription);
   }
 
   return new Response(JSON.stringify({ received: true }), {
@@ -118,4 +123,44 @@ async function fulfill(session: Stripe.Checkout.Session): Promise<void> {
   } catch (err) {
     console.error("Envoi de l'email de livraison échoué", err);
   }
+}
+
+// --- Abonnement Bouclier ---------------------------------------------------
+async function fulfillSubscription(session: Stripe.Checkout.Session): Promise<void> {
+  const db = serviceClient();
+  const email = (session.customer_email ?? session.customer_details?.email ?? '').toLowerCase();
+
+  if (session.id) {
+    await db
+      .from('orders')
+      .update({ status: 'paid', paid_at: new Date().toISOString() })
+      .eq('stripe_session_id', session.id);
+  }
+
+  const subId = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
+  const custId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
+  if (subId) {
+    await db.from('subscriptions').upsert(
+      { email, stripe_subscription_id: subId, stripe_customer_id: custId ?? null, status: 'active' },
+      { onConflict: 'stripe_subscription_id' }
+    );
+  }
+
+  if (email) {
+    const { data: lead } = await db.from('leads').select('id').eq('email', email).maybeSingle();
+    if (lead) await db.from('leads').update({ statut: 'client' }).eq('id', lead.id);
+  }
+}
+
+async function updateSubscriptionStatus(sub: Stripe.Subscription): Promise<void> {
+  const db = serviceClient();
+  await db
+    .from('subscriptions')
+    .update({
+      status: sub.status,
+      current_period_end: sub.current_period_end
+        ? new Date(sub.current_period_end * 1000).toISOString()
+        : null,
+    })
+    .eq('stripe_subscription_id', sub.id);
 }

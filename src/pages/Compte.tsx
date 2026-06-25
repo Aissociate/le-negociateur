@@ -50,6 +50,16 @@ export default function Compte() {
     else setSent(true);
   }
 
+  async function manageSub() {
+    setErr('');
+    try {
+      const { url } = await callAuthFunction<{ url: string }>('billing-portal', {});
+      window.location.href = url;
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Erreur');
+    }
+  }
+
   if (!ready) return <Layout narrow><p className="text-center py-16 text-paper/40">…</p></Layout>;
 
   if (!session) {
@@ -115,9 +125,12 @@ export default function Compte() {
 
           <Section icon={<Repeat className="w-5 h-5 text-gold" />} title="Abonnement Bouclier">
             {data.entitlements.bouclier ? (
-              <p className="text-sm text-emerald-400">
-                Actif. <span className="text-paper/40">Gestion (portail Stripe) bientôt disponible.</span>
-              </p>
+              <div>
+                <p className="text-sm text-emerald-400 mb-2">Actif ✓</p>
+                <button onClick={manageSub} className="text-sm bg-white/10 hover:bg-white/15 px-4 py-2 rounded-lg transition">
+                  Gérer mon abonnement
+                </button>
+              </div>
             ) : (
               <p className="text-paper/60 text-sm">
                 Inactif. <Link to="/kit" className="text-gold underline">Découvrir le Bouclier</Link>.
