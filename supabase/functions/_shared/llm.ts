@@ -81,3 +81,64 @@ export async function callLLM(
     });
   }
 }
+
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+/**
+ * Variante multi-tours (chat) : le system_prompt de `agent` (rendu avec `vars`)
+ * précède l'historique de conversation. Utilisé par le simulateur d'entretien.
+ */
+export async function callLLMChat(
+  db: SupabaseClient,
+  agent: string,
+  messages: ChatMessage[],
+  vars: Record<string, string | number>
+): Promise<LLMResult> {
+  const { data: config, error } = await db.from('agent_config').select('*').eq('agent', agent).single();
+  if (error || !config) throw new Error(`Config agent introuvable : ${agent}`);
+  if (!config.enabled) throw new Error(`Agent désactivé : ${agent}`);
+
+  const start = Date.now();
+  let result: LLMResult | null = null;
+  let detail = '';
+
+  try {
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${Deno.env.get('OPENROUTER_API_KEY')}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: config.model,
+        temperature: config.temperature,
+        max_tokens: config.max_tokens,
+        messages: [{ role: 'system', content: renderTemplate(config.system_prompt, vars) }, ...messages],
+      }),
+    });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error?.message ?? `OpenRouter HTTP ${res.status}`);
+    result = {
+      text: body.choices?.[0]?.message?.content ?? '',
+      tokensIn: body.usage?.prompt_tokens ?? 0,
+      tokensOut: body.usage?.completion_tokens ?? 0,
+    };
+    detail = `model=${config.model} chat`;
+    return result;
+  } catch (err) {
+    detail = err instanceof Error ? err.message : String(err);
+    throw err;
+  } finally {
+    await db.from('agent_runs').insert({
+      agent,
+      status: result ? 'ok' : 'error',
+      tokens_in: result?.tokensIn ?? 0,
+      tokens_out: result?.tokensOut ?? 0,
+      duration_ms: Date.now() - start,
+      detail,
+    });
+  }
+}

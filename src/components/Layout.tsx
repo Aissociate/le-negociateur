@@ -9,9 +9,9 @@ export default function Layout({ children, narrow }: { children: ReactNode; narr
           <Link to="/" className="font-display text-xl font-bold tracking-tight">
             Le <span className="text-gold">Négociateur</span>
           </Link>
-          <span className="text-xs text-paper/50 hidden sm:block">
-            Analyse de rémunération · cadres &amp; métiers en tension
-          </span>
+          <Link to="/compte" className="text-sm text-paper/60 hover:text-paper transition">
+            Mon compte
+          </Link>
         </div>
       </header>
 

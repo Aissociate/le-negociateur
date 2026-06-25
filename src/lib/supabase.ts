@@ -34,7 +34,7 @@ export async function getFunction<T>(name: string, params: Record<string, string
   return json as T;
 }
 
-/** Appel POST vers une Edge Function réservée admin : passe l'access_token de l'admin connecté. */
+/** Appel POST vers une Edge Function authentifiée : passe l'access_token de l'utilisateur connecté. */
 export async function callAdminFunction<T>(name: string, body: unknown): Promise<T> {
   const {
     data: { session },
@@ -49,3 +49,6 @@ export async function callAdminFunction<T>(name: string, body: unknown): Promise
   if (!res.ok) throw new Error(json.error ?? `Erreur ${res.status}`);
   return json as T;
 }
+
+/** Alias sémantique pour l'espace client (utilisateur connecté via magic link). */
+export const callAuthFunction = callAdminFunction;

@@ -41,7 +41,7 @@ npm run dev
    ```bash
    supabase functions deploy rapport-ecart public-data ab-track create-checkout stripe-webhook \
      send-emails update-benchmarks orchestrator prospect-import prospect-ingest prospect-enrich \
-     salary-intel-test personalize-kit
+     salary-intel-test personalize-kit account-data interview-chat
    ```
 4. Renseigner les secrets (Settings → Edge Functions → Secrets) :
    - `OPENROUTER_API_KEY` — IA (modèles réglables dans `/admin/prompts`)
@@ -93,6 +93,12 @@ Séquence emails · Commandes · **Orchestration** (file `agent_jobs`).
 `/admin/prospection` crée des listes, lance un **run Apify** (scraper Apollo.io), ingère le dataset,
 puis **score + génère un angle d'approche par IA**. Fonctions protégées par garde admin (JWT).
 Conformité B2B intégrée (voir [CONFORMITE.md](CONFORMITE.md)).
+
+## Espace client & Simulateur
+
+`/compte` — connexion **magic link** (Supabase OTP), avec documents générés, factures, statut d'abonnement et **accès IA si actif**. *(Configurer les Redirect URLs dans Supabase → Authentication → URL Configuration : ajouter `https://votredomaine.fr/compte`.)*
+
+`/simulateur` — **Simulateur d'entretien IA** (gated par l'achat du Simulateur / Pack / Bouclier) : jeu de rôle où l'IA joue le recruteur, connaît tout le contexte du client (positionnement + profil détaillé), mène l'entretien selon un **persona**, avec **input vocal** (Web Speech API) et débrief noté. Agent `simulateur_entretien` éditable dans `/admin/prompts`.
 
 ## Orchestration
 
