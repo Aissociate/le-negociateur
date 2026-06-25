@@ -92,7 +92,8 @@ export default function Personnaliser() {
         realisations: real,
       };
       const { token } = await callFunction<{ token: string }>('personalize-kit', { session, profile });
-      navigate(`/kit/document/${token}`);
+      // Tunnel OTO (upsell/downsell) avant la remise du Kit final.
+      navigate(`/oto?session=${encodeURIComponent(session)}&token=${token}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Une erreur est survenue. Réessayez.');
       setSubmitting(false);

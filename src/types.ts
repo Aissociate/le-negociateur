@@ -116,6 +116,18 @@ export interface Product {
   updated_at: string;
 }
 
+// Étape de tunnel OTO (upsell/downsell post-achat), configurable en back-office.
+export interface OtoStep {
+  id: string;
+  position: number;
+  headline: string;
+  subhead: string;
+  upsell_slug: string;
+  downsell_slug: string | null;
+  active: boolean;
+  created_at: string;
+}
+
 // ---------------------------------------------------------------------
 // IA : configuration & journal (OpenRouter)
 // ---------------------------------------------------------------------

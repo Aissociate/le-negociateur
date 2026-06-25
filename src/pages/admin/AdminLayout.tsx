@@ -9,6 +9,7 @@ const NAV = [
   { to: '/admin/benchmarks', label: 'Base salaires' },
   { to: '/admin/intel-test', label: 'Test agrégation' },
   { to: '/admin/products', label: 'Produits & prix' },
+  { to: '/admin/oto', label: 'Tunnel OTO' },
   { to: '/admin/ab', label: 'A/B copy' },
   { to: '/admin/prompts', label: 'IA & Prompts' },
   { to: '/admin/emails', label: 'Séquence emails' },

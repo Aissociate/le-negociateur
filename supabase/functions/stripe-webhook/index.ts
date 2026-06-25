@@ -66,9 +66,10 @@ async function fulfill(session: Stripe.Checkout.Session): Promise<void> {
     .maybeSingle();
   if (existing) return;
 
+  const custId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
   await db
     .from('orders')
-    .update({ status: 'paid', paid_at: new Date().toISOString() })
+    .update({ status: 'paid', paid_at: new Date().toISOString(), stripe_customer_id: custId ?? null })
     .eq('id', order.id);
 
   // 2. Lead + dernier rapport (pour personnaliser le Kit)

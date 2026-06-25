@@ -54,6 +54,10 @@ Deno.serve(async (req) => {
       mode: isSubscription ? 'subscription' : 'payment',
       customer_email: email,
       line_items: lineItems,
+      // One-shots : on crée un client et on mémorise la carte pour les OTO 1-clic.
+      ...(isSubscription
+        ? {}
+        : { customer_creation: 'always', payment_intent_data: { setup_future_usage: 'off_session' } }),
       success_url: isSubscription
         ? `${siteUrl}/compte?welcome=1`
         : `${siteUrl}/merci?session_id={CHECKOUT_SESSION_ID}`,

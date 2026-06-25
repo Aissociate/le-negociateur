@@ -8,6 +8,8 @@ import KitDocument from './pages/KitDocument';
 import Personnaliser from './pages/Personnaliser';
 import Compte from './pages/Compte';
 import Simulateur from './pages/Simulateur';
+import Oto from './pages/Oto';
+import OtoConfig from './pages/admin/OtoConfig';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminLayout from './pages/admin/AdminLayout';
 import Dashboard from './pages/admin/Dashboard';
@@ -57,6 +59,7 @@ export default function App() {
       <Route path="/personnaliser" element={<Personnaliser />} />
       <Route path="/compte" element={<Compte />} />
       <Route path="/simulateur" element={<Simulateur />} />
+      <Route path="/oto" element={<Oto />} />
       <Route path="/mentions" element={<Legal title="Mentions légales" />} />
       <Route path="/confidentialite" element={<Legal title="Politique de confidentialité" />} />
 
@@ -69,6 +72,7 @@ export default function App() {
         <Route path="benchmarks" element={<Benchmarks />} />
         <Route path="intel-test" element={<IntelTest />} />
         <Route path="products" element={<Products />} />
+        <Route path="oto" element={<OtoConfig />} />
         <Route path="ab" element={<ABResults />} />
         <Route path="prompts" element={<Prompts />} />
         <Route path="emails" element={<Emails />} />
