@@ -1,11 +1,14 @@
+import { useEffect, useState } from 'react';
 import { ArrowRight, Star } from 'lucide-react';
 import { SOCIAL_PROOF, SOCIAL_PROOF_MIN_COUNT } from '../lib/cro';
 import { useAnalysesCount } from '../lib/useAnalysesCount';
 
 const videoUrl = import.meta.env.VITE_HERO_VIDEO_URL as string | undefined;
 const posterUrl = import.meta.env.VITE_HERO_POSTER_URL as string | undefined;
-// Film HTML animé (export claude.ai/design) embarqué en iframe — ex. /hero-film/index.html
-const filmUrl = import.meta.env.VITE_HERO_FILM_URL as string | undefined;
+// Film HTML animé (export claude.ai/design) en iframe, ACTIVÉ PAR DÉFAUT.
+// VITE_HERO_FILM_URL=off pour le désactiver, ou une URL pour le personnaliser.
+const filmEnv = import.meta.env.VITE_HERO_FILM_URL as string | undefined;
+const filmUrl = filmEnv === 'off' ? undefined : filmEnv || '/hero-film/index.html';
 
 /**
  * Hero plein écran avec vidéo de fond (configurable via VITE_HERO_VIDEO_URL).
@@ -21,16 +24,37 @@ export default function Hero() {
   const scrollToForm = () =>
     document.getElementById('questionnaire')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
+  // Chargement différé du film : le Hero (texte + CTA) s'affiche d'abord.
+  const [showFilm, setShowFilm] = useState(false);
+  useEffect(() => {
+    if (!filmUrl) return;
+    let cancelled = false;
+    const w = window as unknown as {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    const start = () => {
+      if (!cancelled) setShowFilm(true);
+    };
+    const id = w.requestIdleCallback ? w.requestIdleCallback(start, { timeout: 1500 }) : window.setTimeout(start, 700);
+    return () => {
+      cancelled = true;
+      if (w.requestIdleCallback && w.cancelIdleCallback) w.cancelIdleCallback(id);
+      else clearTimeout(id);
+    };
+  }, []);
+
   return (
     <section className="relative overflow-hidden border-b border-white/10">
-      {filmUrl ? (
+      {/* Fond : dégradé instantané, puis film (ou vidéo) par-dessus */}
+      <div className="absolute inset-0 bg-gradient-to-br from-ink via-ink to-black" />
+      {filmUrl && showFilm ? (
         <iframe
           src={filmUrl}
           title="Le Négociateur — film"
           className="absolute inset-0 w-full h-full border-0 pointer-events-none"
-          loading="lazy"
         />
-      ) : videoUrl ? (
+      ) : !filmUrl && videoUrl ? (
         <video
           className="absolute inset-0 w-full h-full object-cover"
           autoPlay
@@ -41,9 +65,7 @@ export default function Hero() {
         >
           <source src={videoUrl} />
         </video>
-      ) : (
-        <div className="absolute inset-0 bg-gradient-to-br from-ink via-ink to-black" />
-      )}
+      ) : null}
       {/* Voile pour la lisibilité */}
       <div className="absolute inset-0 bg-ink/70" />
 
