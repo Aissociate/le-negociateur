@@ -7,6 +7,7 @@ const NAV = [
   { to: '/admin/leads', label: 'Leads (CRM)' },
   { to: '/admin/prospection', label: 'Prospection' },
   { to: '/admin/benchmarks', label: 'Base salaires' },
+  { to: '/admin/intel-test', label: 'Test agrégation' },
   { to: '/admin/products', label: 'Produits & prix' },
   { to: '/admin/ab', label: 'A/B copy' },
   { to: '/admin/prompts', label: 'IA & Prompts' },

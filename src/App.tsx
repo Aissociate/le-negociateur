@@ -17,6 +17,7 @@ import Products from './pages/admin/Products';
 import ABResults from './pages/admin/ABResults';
 import Prospection from './pages/admin/Prospection';
 import Orchestration from './pages/admin/Orchestration';
+import IntelTest from './pages/admin/IntelTest';
 
 function Legal({ title }: { title: string }) {
   return (
@@ -60,6 +61,7 @@ export default function App() {
         <Route path="leads" element={<Leads />} />
         <Route path="prospection" element={<Prospection />} />
         <Route path="benchmarks" element={<Benchmarks />} />
+        <Route path="intel-test" element={<IntelTest />} />
         <Route path="products" element={<Products />} />
         <Route path="ab" element={<ABResults />} />
         <Route path="prompts" element={<Prompts />} />
