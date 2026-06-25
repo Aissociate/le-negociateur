@@ -24,7 +24,7 @@ const __autoplay = __params.get('paused') !== '1';
 function Film() {
   return (
     <Stage width={1920} height={1080} duration={30} background="var(--encre-950)"
-           fps={60} loop={true} autoplay={__autoplay} persistKey="nego-film">
+           fps={60} loop={true} controls={false} autoplay={__autoplay} persistKey="nego-film">
       <Seeker />
       <SceneDouleur start={0}     end={6.2}  />
       <SceneChiffre  start={6.0}  end={13.6} />
