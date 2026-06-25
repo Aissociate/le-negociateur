@@ -33,6 +33,15 @@ Deno.serve(async (req) => {
     if (!product) return json({ error: 'Produit indisponible.' }, 400);
     if (product.kind === 'subscription') return json({ error: 'Produit récurrent : utilisez le checkout.' }, 400);
 
+    // Sécurité : on ne facture en OTO que des produits réellement configurés comme tels.
+    const { data: steps } = await db.from('oto_steps').select('upsell_slug, downsell_slug').eq('active', true);
+    const allowed = new Set<string>();
+    for (const s of steps ?? []) {
+      allowed.add(s.upsell_slug);
+      if (s.downsell_slug) allowed.add(s.downsell_slug);
+    }
+    if (!allowed.has(product_slug)) return json({ error: 'Produit non proposé en OTO.' }, 400);
+
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, { apiVersion: '2024-06-20' });
     const siteUrl = Deno.env.get('SITE_URL') ?? 'http://localhost:5173';
 
