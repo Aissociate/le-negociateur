@@ -48,8 +48,19 @@ export default function Hero() {
 
   return (
     <section className="border-b border-white/10">
-      {/* 1) La vidéo / le film en premier (bloc 16:9 dédié, sans superposition) */}
-      <div className="relative w-full max-w-5xl mx-auto aspect-video bg-black overflow-hidden">
+      {/* 1) Titre + accroche */}
+      <div className="max-w-3xl mx-auto px-4 pt-12 sm:pt-16 text-center">
+        <p className="text-gold uppercase tracking-widest text-xs mb-4">Cadres &amp; métiers en tension</p>
+        <h1 className="font-display text-3xl sm:text-5xl font-bold leading-tight">
+          Êtes-vous assez payé pour ce que vous savez faire&nbsp;?
+        </h1>
+        <p className="mt-4 text-paper/80 text-lg max-w-xl mx-auto">
+          Votre patron, lui, dirait oui. Découvrez en 30 secondes l'écart réel entre votre salaire et le marché.
+        </p>
+      </div>
+
+      {/* 2) La vidéo / le film, sous l'accroche */}
+      <div className="relative w-full max-w-5xl mx-auto aspect-video bg-black overflow-hidden mt-8">
         <div className="absolute inset-0 bg-gradient-to-br from-ink via-ink to-black" />
         {filmUrl && showFilm ? (
           <iframe
@@ -71,18 +82,11 @@ export default function Hero() {
         ) : null}
       </div>
 
-      {/* 2) Le texte ensuite, sous la vidéo */}
-      <div className="max-w-3xl mx-auto px-4 py-12 sm:py-16 text-center">
-        <p className="text-gold uppercase tracking-widest text-xs mb-4">Cadres &amp; métiers en tension</p>
-        <h1 className="font-display text-3xl sm:text-5xl font-bold leading-tight">
-          Êtes-vous assez payé pour ce que vous savez faire&nbsp;?
-        </h1>
-        <p className="mt-4 text-paper/80 text-lg max-w-xl mx-auto">
-          Votre patron, lui, dirait oui. Découvrez en 30 secondes l'écart réel entre votre salaire et le marché.
-        </p>
+      {/* 3) CTA + réassurance + sources + note, après la vidéo */}
+      <div className="max-w-3xl mx-auto px-4 pt-8 pb-12 sm:pb-16 text-center">
         <button
           onClick={scrollToForm}
-          className="mt-8 bg-gold text-ink font-bold px-8 py-4 rounded-xl hover:brightness-105 transition inline-flex items-center gap-2"
+          className="bg-gold text-ink font-bold px-8 py-4 rounded-xl hover:brightness-105 transition inline-flex items-center gap-2"
         >
           Tester ma rémunération <ArrowRight className="w-5 h-5" />
         </button>
@@ -98,7 +102,7 @@ export default function Hero() {
         </div>
       </div>
 
-      {/* Bandeau de témoignages défilant — pleine largeur, sous le CTA */}
+      {/* 4) Bandeau de témoignages défilant — pleine largeur */}
       <Testimonials />
     </section>
   );

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Loader2, Check, X } from 'lucide-react';
+import { Loader2, Check, X, ShieldCheck } from 'lucide-react';
 import Layout from '../components/Layout';
 import { supabase, callFunction } from '../lib/supabase';
 import { Product, OtoStep } from '../types';
@@ -134,9 +134,12 @@ export default function Oto() {
               : 'Oui, activer maintenant'
             : `Oui, ajouter en 1 clic — ${euros(offer.price_cents)}`}
         </button>
-        {offer.kind !== 'subscription' && (
-          <p className="text-center text-xs text-ink/40 mt-2">Débité sur la carte de votre commande, sans ressaisie.</p>
-        )}
+        <div className="mt-3 space-y-1 text-center text-xs text-ink/45">
+          <p className="flex items-center justify-center gap-1">
+            <ShieldCheck className="w-3.5 h-3.5" /> Satisfait ou remboursé sous 30 jours
+          </p>
+          {offer.kind !== 'subscription' && <p>Débité sur la carte de votre commande, sans ressaisie.</p>}
+        </div>
       </div>
 
       <button
