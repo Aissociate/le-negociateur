@@ -48,13 +48,20 @@ Deno.serve(async (req) => {
     // deno-lint-ignore no-explicit-any
     const discounts: any[] = [];
     if (trial && product.price_cents > 100) {
-      const coupon = await stripe.coupons.create({
-        amount_off: product.price_cents - 100,
-        currency: product.currency ?? 'eur',
-        duration: 'once',
-        name: '1er mois à 1€',
-      });
-      discounts.push({ coupon: coupon.id });
+      // Coupon réutilisable (déterministe par devise+prix) plutôt qu'un coupon par appel.
+      const couponId = `trial1e_${product.currency ?? 'eur'}_${product.price_cents}`;
+      try {
+        await stripe.coupons.retrieve(couponId);
+      } catch {
+        await stripe.coupons.create({
+          id: couponId,
+          amount_off: product.price_cents - 100,
+          currency: product.currency ?? 'eur',
+          duration: 'once',
+          name: '1er mois à 1€',
+        });
+      }
+      discounts.push({ coupon: couponId });
     }
 
     const checkout = await stripe.checkout.sessions.create({

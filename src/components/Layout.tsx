@@ -1,7 +1,15 @@
 import { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
-export default function Layout({ children, narrow }: { children: ReactNode; narrow?: boolean }) {
+export default function Layout({
+  children,
+  narrow,
+  hero,
+}: {
+  children: ReactNode;
+  narrow?: boolean;
+  hero?: ReactNode;
+}) {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="border-b border-white/10">
@@ -14,6 +22,8 @@ export default function Layout({ children, narrow }: { children: ReactNode; narr
           </Link>
         </div>
       </header>
+
+      {hero && <div className="w-full">{hero}</div>}
 
       <main className={`flex-1 w-full mx-auto px-4 py-8 ${narrow ? 'max-w-2xl' : 'max-w-5xl'}`}>
         {children}

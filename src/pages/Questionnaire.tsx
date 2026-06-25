@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Lock, Loader2 } from 'lucide-react';
 import Layout from '../components/Layout';
+import Hero from '../components/Hero';
 import { SECTEURS, SENIORITES, LOCALISATIONS } from '../types';
 import { callFunction } from '../lib/supabase';
 import { CAPTURE_EXPERIMENT, assignVariant, trackAB, Variant } from '../lib/ab';
@@ -98,9 +99,9 @@ export default function Questionnaire() {
   };
 
   return (
-    <Layout narrow>
+    <Layout narrow hero={<Hero />}>
       {/* Barre de progression */}
-      <div className="mb-8">
+      <div className="mb-8" id="questionnaire">
         <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
           <div className="h-full bg-gold transition-all duration-300" style={{ width: `${progress}%` }} />
         </div>

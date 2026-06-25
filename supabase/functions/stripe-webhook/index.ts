@@ -89,12 +89,18 @@ async function fulfill(session: Stripe.Checkout.Session): Promise<void> {
     ? await db.from('gap_reports').select('*').eq('id', lead.last_report_id).maybeSingle()
     : { data: null };
 
-  // 3. Génération du Kit baseline (le détail post-achat l'enrichit via personalize-kit)
+  // 3. Génération du livrable baseline. « argumentaire-eclair » seul -> version allégée.
+  const orderSlugs = (order.product_slugs ?? []) as string[];
+  const eclairOnly =
+    orderSlugs.includes('argumentaire-eclair') &&
+    !orderSlugs.includes('kit') &&
+    !orderSlugs.includes('pack-carriere');
+  const docAgent = eclairOnly ? 'argumentaire_eclair' : 'kit_offensif';
   const vars = { ...baseKitVars(report, lead), profil_detaille: 'n/c', realisations: 'n/c' };
 
   let content: string;
   try {
-    content = (await callLLM(db, 'kit_offensif', vars)).text;
+    content = (await callLLM(db, docAgent, vars)).text;
   } catch (err) {
     console.error('Génération du Kit échouée', err);
     content =

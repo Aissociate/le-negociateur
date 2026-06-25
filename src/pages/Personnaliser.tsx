@@ -91,7 +91,22 @@ export default function Personnaliser() {
         avantages,
         realisations: real,
       };
-      const { token } = await callFunction<{ token: string }>('personalize-kit', { session, profile });
+      // Le webhook Stripe valide le paiement de façon asynchrone : on tolère un
+      // court délai (race) en réessayant si la commande n'est pas encore "payée".
+      let token = '';
+      for (let attempt = 0; attempt < 3 && !token; attempt++) {
+        try {
+          const r = await callFunction<{ token: string }>('personalize-kit', { session, profile });
+          token = r.token;
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : '';
+          if (/pay[ée]/i.test(msg) && attempt < 2) {
+            await new Promise((res) => setTimeout(res, 2500));
+            continue;
+          }
+          throw e;
+        }
+      }
       // Tunnel OTO (upsell/downsell) avant la remise du Kit final.
       navigate(`/oto?session=${encodeURIComponent(session)}&token=${token}`);
     } catch (e) {
