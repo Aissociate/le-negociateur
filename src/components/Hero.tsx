@@ -96,9 +96,10 @@ export default function Hero() {
             {SOCIAL_PROOF.rating} · {statText}
           </span>
         </div>
-
-        <Testimonials />
       </div>
+
+      {/* Bandeau de témoignages défilant — pleine largeur, sous le CTA */}
+      <Testimonials />
     </section>
   );
 }
