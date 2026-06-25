@@ -45,31 +45,32 @@ export default function Hero() {
   }, []);
 
   return (
-    <section className="relative overflow-hidden border-b border-white/10">
-      {/* Fond : dégradé instantané, puis film (ou vidéo) par-dessus */}
-      <div className="absolute inset-0 bg-gradient-to-br from-ink via-ink to-black" />
-      {filmUrl && showFilm ? (
-        <iframe
-          src={filmUrl}
-          title="Le Négociateur — film"
-          className="absolute inset-0 w-full h-full border-0 pointer-events-none"
-        />
-      ) : !filmUrl && videoUrl ? (
-        <video
-          className="absolute inset-0 w-full h-full object-cover"
-          autoPlay
-          muted
-          loop
-          playsInline
-          poster={posterUrl}
-        >
-          <source src={videoUrl} />
-        </video>
-      ) : null}
-      {/* Voile pour la lisibilité */}
-      <div className="absolute inset-0 bg-ink/70" />
+    <section className="border-b border-white/10">
+      {/* 1) La vidéo / le film en premier (bloc 16:9 dédié, sans superposition) */}
+      <div className="relative w-full max-w-5xl mx-auto aspect-video bg-black overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-ink via-ink to-black" />
+        {filmUrl && showFilm ? (
+          <iframe
+            src={filmUrl}
+            title="Le Négociateur — film"
+            className="absolute inset-0 w-full h-full border-0 pointer-events-none"
+          />
+        ) : !filmUrl && videoUrl ? (
+          <video
+            className="absolute inset-0 w-full h-full object-cover"
+            autoPlay
+            muted
+            loop
+            playsInline
+            poster={posterUrl}
+          >
+            <source src={videoUrl} />
+          </video>
+        ) : null}
+      </div>
 
-      <div className="relative max-w-3xl mx-auto px-4 py-20 sm:py-28 text-center">
+      {/* 2) Le texte ensuite, sous la vidéo */}
+      <div className="max-w-3xl mx-auto px-4 py-12 sm:py-16 text-center">
         <p className="text-gold uppercase tracking-widest text-xs mb-4">Cadres &amp; métiers en tension</p>
         <h1 className="font-display text-3xl sm:text-5xl font-bold leading-tight">
           Êtes-vous assez payé pour ce que vous savez faire&nbsp;?
