@@ -43,6 +43,8 @@ rapport de force favorable). Marque unique, deux temps : **diagnostic gratuit** 
 
 - ✅ **Agrégation multi-sources par prospect** (`salary_intel`) : calculer-salaire.com, moicombien.fr,
   France Travail (OAuth2). Best-effort, sauvegardée, utilisée par le compte-rendu IA.
+- ✅ **Personnalisation post-achat du Kit** (`/personnaliser`, `kit_profiles`) : questionnaire détaillé
+  (package de rémunération complet, profil emploi/entreprise fin, réalisations/réussites) → Kit régénéré sur-mesure.
 - **Ingestion en masse des datasets publics** (INSEE/DARES/APEC) pour enrichir le référentiel de base
   (en complément de l'agrégation temps réel par prospect ci-dessus).
 - **Définir le contenu réel de l'upsell** (placeholder « Accompagnement Premium » à 99 €).

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Sparkles } from 'lucide-react';
 import Layout from '../components/Layout';
 import { getFunction } from '../lib/supabase';
 import { CAPTURE_EXPERIMENT, assignVariant, trackAB } from '../lib/ab';
@@ -37,25 +37,28 @@ export default function Merci() {
     <Layout narrow>
       <div className="text-center py-16">
         <CheckCircle2 className="mx-auto text-gold mb-6" size={56} />
-        <h1 className="font-display text-3xl font-bold mb-4">Paiement confirmé. Bienvenue.</h1>
+        <h1 className="font-display text-3xl font-bold mb-3">Paiement confirmé 🎉</h1>
         <p className="text-paper/80 mb-8 max-w-lg mx-auto">
-          Votre <strong>Kit de Négociation</strong> est en cours de génération personnalisée. Vous recevrez aussi le
-          lien par email.
+          Dernière étape pour un Kit <strong>vraiment sur-mesure</strong> : renseignez votre situation complète et vos
+          réussites (3 min). Votre Kit sera régénéré avec tous ces éléments.
         </p>
-        {kitUrl ? (
+        {sessionId && (
           <Link
-            to={kitUrl}
-            className="inline-block bg-gold text-ink font-bold px-8 py-4 rounded-lg hover:brightness-105 transition"
+            to={`/personnaliser?session=${sessionId}`}
+            className="inline-flex items-center gap-2 bg-gold text-ink font-bold px-8 py-4 rounded-lg hover:brightness-105 transition"
           >
-            Accéder à mon Kit →
+            <Sparkles className="w-5 h-5" /> Personnaliser mon Kit (3 min)
           </Link>
-        ) : tries > 20 ? (
-          <p className="text-paper/60 text-sm">
-            La génération prend plus de temps que prévu — le lien arrive par email d'ici quelques minutes.
-          </p>
-        ) : (
-          <p className="text-paper/60 animate-pulse">Génération en cours…</p>
         )}
+        <div className="mt-6">
+          {kitUrl ? (
+            <Link to={kitUrl} className="text-paper/60 text-sm underline hover:text-paper">
+              ou accéder directement à mon Kit standard
+            </Link>
+          ) : (
+            <p className="text-paper/40 text-xs">Votre Kit standard se prépare aussi (lien envoyé par email).</p>
+          )}
+        </div>
       </div>
     </Layout>
   );

@@ -5,6 +5,7 @@ import Reveal from './pages/Reveal';
 import Kit from './pages/Kit';
 import Merci from './pages/Merci';
 import KitDocument from './pages/KitDocument';
+import Personnaliser from './pages/Personnaliser';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminLayout from './pages/admin/AdminLayout';
 import Dashboard from './pages/admin/Dashboard';
@@ -51,6 +52,7 @@ export default function App() {
       <Route path="/kit" element={<Kit />} />
       <Route path="/merci" element={<Merci />} />
       <Route path="/kit/document/:token" element={<KitDocument />} />
+      <Route path="/personnaliser" element={<Personnaliser />} />
       <Route path="/mentions" element={<Legal title="Mentions légales" />} />
       <Route path="/confidentialite" element={<Legal title="Politique de confidentialité" />} />
 

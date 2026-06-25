@@ -7,6 +7,7 @@ import Stripe from 'npm:stripe@16';
 import { serviceClient } from '../_shared/db.ts';
 import { callLLM } from '../_shared/llm.ts';
 import { sendEmail } from '../_shared/email.ts';
+import { baseKitVars } from '../_shared/kit.ts';
 
 const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, { apiVersion: '2024-06-20' });
 const cryptoProvider = Stripe.createSubtleCryptoProvider();
@@ -78,41 +79,8 @@ async function fulfill(session: Stripe.Checkout.Session): Promise<void> {
     ? await db.from('gap_reports').select('*').eq('id', lead.last_report_id).maybeSingle()
     : { data: null };
 
-  // 3. Génération du Kit (IA) — enrichie avec toutes les données factuelles du rapport
-  const gp = report?.gap_percent ?? 0;
-  const position =
-    gp >= 5 ? 'en dessous de la médiane' : gp <= -5 ? 'au-dessus de la médiane' : 'aligné sur la médiane';
-  const intel = (report?.intel ?? {}) as Record<string, unknown>;
-  const fmt = (v: unknown): string | number => (v === undefined || v === null ? 'n/c' : (v as string | number));
-  const vars = {
-    poste: report?.poste ?? lead?.poste ?? 'Cadre',
-    secteur: report?.secteur ?? lead?.secteur ?? 'Tous secteurs',
-    seniorite: report?.seniorite ?? lead?.seniorite ?? 'Confirmé (3-8 ans)',
-    localisation: report?.localisation ?? lead?.localisation ?? 'France',
-    remuneration: report?.remuneration_actuelle ?? lead?.remuneration_actuelle ?? 0,
-    market_low: report?.market_low ?? 0,
-    market_median: report?.market_median ?? 0,
-    market_high: report?.market_high ?? 0,
-    gap_annual: report?.gap_annual ?? 0,
-    gap_percent: gp,
-    segment: report?.segment ?? 'inconnu',
-    position,
-    tension: report?.metier_en_tension ? 'oui' : 'non',
-    net_monthly: fmt(intel.net_monthly),
-    net_annual: fmt(intel.net_annual),
-    percentile: fmt(intel.percentile),
-    insee_verdict: fmt(intel.insee_verdict),
-    ft_tension: fmt(intel.ft_tension),
-    ft_offres: fmt(intel.ft_offres),
-    ft_salaire_min: fmt(intel.ft_salaire_min),
-    ft_salaire_max: fmt(intel.ft_salaire_max),
-    borrowing_current: fmt(intel.borrowing_current),
-    borrowing_target: fmt(intel.borrowing_target),
-    borrowing_uplift: fmt(intel.borrowing_uplift),
-    gap_5y: fmt(intel.gap_5y),
-    upside_to_high: fmt(intel.upside_to_high),
-    providers: (intel.providers_ok as string[] | undefined)?.join(', ') || 'référentiel interne',
-  };
+  // 3. Génération du Kit baseline (le détail post-achat l'enrichit via personalize-kit)
+  const vars = { ...baseKitVars(report, lead), profil_detaille: 'n/c', realisations: 'n/c' };
 
   let content: string;
   try {
@@ -139,11 +107,12 @@ async function fulfill(session: Stripe.Checkout.Session): Promise<void> {
   try {
     await sendEmail(
       order.email,
-      'Votre Kit de Négociation est prêt',
+      'Votre Kit de Négociation est prêt — personnalisez-le pour un dossier sur-mesure',
       `<p>Bonjour,</p>
-       <p>Merci pour votre confiance. Votre <strong>Kit de Négociation</strong> personnalisé est prêt :</p>
+       <p>Merci pour votre confiance. Votre <strong>Kit de Négociation</strong> est prêt :</p>
        <p><a href="${siteUrl}/kit/document/${token}" style="display:inline-block;background:#c9a227;color:#10141a;padding:12px 24px;border-radius:8px;font-weight:bold;text-decoration:none">Accéder à mon Kit</a></p>
-       <p>Depuis cette page, le bouton « Télécharger en PDF » vous permet d'enregistrer votre exemplaire.</p>
+       <p><strong>Pour un dossier encore plus précis</strong> — avec votre package de rémunération complet et vos réussites professionnelles — prenez 3 minutes pour le personnaliser :</p>
+       <p><a href="${siteUrl}/personnaliser?session=${session.id}" style="display:inline-block;background:#10141a;color:#f6f3ec;padding:12px 24px;border-radius:8px;font-weight:bold;text-decoration:none">Personnaliser mon Kit</a></p>
        <p>Bonne négociation,<br/>Le Négociateur</p>`
     );
   } catch (err) {
