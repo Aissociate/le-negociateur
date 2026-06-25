@@ -4,6 +4,8 @@ import { useAnalysesCount } from '../lib/useAnalysesCount';
 
 const videoUrl = import.meta.env.VITE_HERO_VIDEO_URL as string | undefined;
 const posterUrl = import.meta.env.VITE_HERO_POSTER_URL as string | undefined;
+// Film HTML animé (export claude.ai/design) embarqué en iframe — ex. /hero-film/index.html
+const filmUrl = import.meta.env.VITE_HERO_FILM_URL as string | undefined;
 
 /**
  * Hero plein écran avec vidéo de fond (configurable via VITE_HERO_VIDEO_URL).
@@ -21,7 +23,14 @@ export default function Hero() {
 
   return (
     <section className="relative overflow-hidden border-b border-white/10">
-      {videoUrl ? (
+      {filmUrl ? (
+        <iframe
+          src={filmUrl}
+          title="Le Négociateur — film"
+          className="absolute inset-0 w-full h-full border-0 pointer-events-none"
+          loading="lazy"
+        />
+      ) : videoUrl ? (
         <video
           className="absolute inset-0 w-full h-full object-cover"
           autoPlay
