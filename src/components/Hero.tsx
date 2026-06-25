@@ -1,4 +1,5 @@
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Star } from 'lucide-react';
+import { SOCIAL_PROOF } from '../lib/cro';
 
 const videoUrl = import.meta.env.VITE_HERO_VIDEO_URL as string | undefined;
 const posterUrl = import.meta.env.VITE_HERO_POSTER_URL as string | undefined;
@@ -46,6 +47,14 @@ export default function Hero() {
           Tester ma rémunération <ArrowRight className="w-5 h-5" />
         </button>
         <p className="mt-3 text-xs text-paper/50">Gratuit · données sourcées · sans engagement</p>
+        <div className="mt-6 flex items-center justify-center gap-1 text-gold">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <Star key={i} className="w-4 h-4 fill-current" />
+          ))}
+          <span className="text-xs text-paper/60 ml-2">
+            {SOCIAL_PROOF.rating} · {SOCIAL_PROOF.stat}
+          </span>
+        </div>
       </div>
     </section>
   );
