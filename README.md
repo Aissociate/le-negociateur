@@ -54,8 +54,10 @@ npm run dev
 
 ### 3. Stripe
 
-Webhook → `https://VOTRE-PROJET.supabase.co/functions/v1/stripe-webhook`, événement
-`checkout.session.completed`, copier le secret `whsec_...` dans `STRIPE_WEBHOOK_SECRET`.
+Webhook → `https://VOTRE-PROJET.supabase.co/functions/v1/stripe-webhook`, événements
+`checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted` ;
+copier le secret `whsec_...` dans `STRIPE_WEBHOOK_SECRET`. Activer le **Customer Portal**
+(Stripe → Settings → Billing → Customer portal) pour la gestion d'abonnement.
 
 ### 4. Compte admin
 
