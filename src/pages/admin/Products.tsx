@@ -101,6 +101,8 @@ export default function Products() {
                   <option value="kit">kit</option>
                   <option value="upsell">upsell</option>
                   <option value="subscription">subscription</option>
+                  <option value="downsell">downsell</option>
+                  <option value="bundle">bundle</option>
                 </select>
               </div>
               <div>

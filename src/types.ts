@@ -105,7 +105,7 @@ export interface Product {
   id: string;
   slug: string;
   name: string;
-  kind: 'kit' | 'upsell' | 'subscription';
+  kind: 'kit' | 'upsell' | 'subscription' | 'downsell' | 'bundle';
   price_cents: number;
   compare_at_cents: number | null;
   currency: string;
