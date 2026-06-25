@@ -5,18 +5,20 @@ import Layout from '../components/Layout';
 import { supabase, callAuthFunction } from '../lib/supabase';
 
 type Msg = { role: 'user' | 'assistant'; content: string };
+type Persona = { key: string; label: string; prompt: string };
 
-const PERSONAS = [
-  { key: 'bienveillant', label: 'Manager bienveillant', text: "Manager à l'écoute, encourageant mais réaliste sur le budget." },
-  { key: 'direct', label: 'Direct & budget', text: 'Manager direct et factuel, attaché au budget, ouvert mais exigeant.' },
-  { key: 'coriace', label: 'Recruteur coriace', text: 'Recruteur expérimenté et coriace, qui pousse fort les objections et cède difficilement.' },
-];
+const FALLBACK_PERSONA: Persona = {
+  key: 'default',
+  label: 'Manager',
+  prompt: 'Manager direct et factuel, attaché au budget, ouvert mais exigeant.',
+};
 
 export default function Simulateur() {
   const navigate = useNavigate();
   const [authChecked, setAuthChecked] = useState(false);
   const [allowed, setAllowed] = useState(false);
-  const [persona, setPersona] = useState(PERSONAS[1]);
+  const [personas, setPersonas] = useState<Persona[]>([]);
+  const [persona, setPersona] = useState<Persona>(FALLBACK_PERSONA);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
@@ -43,6 +45,21 @@ export default function Simulateur() {
   }, [navigate]);
 
   useEffect(() => {
+    supabase
+      .from('simulator_personas')
+      .select('key,label,prompt')
+      .eq('active', true)
+      .order('position')
+      .then(({ data }) => {
+        const list = (data as Persona[]) ?? [];
+        if (list.length) {
+          setPersonas(list);
+          setPersona(list[0]);
+        }
+      });
+  }, []);
+
+  useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, busy]);
 
@@ -53,7 +70,7 @@ export default function Simulateur() {
     try {
       const { reply } = await callAuthFunction<{ reply: string }>('interview-chat', {
         messages: history,
-        persona: persona.text,
+        persona: persona.prompt,
       });
       setMessages([...visible, { role: 'assistant', content: reply }]);
     } catch (e) {
@@ -117,10 +134,13 @@ export default function Simulateur() {
         <h1 className="font-display text-2xl font-bold">Simulateur d'entretien</h1>
         <select
           value={persona.key}
-          onChange={(e) => setPersona(PERSONAS.find((p) => p.key === e.target.value) ?? PERSONAS[0])}
+          onChange={(e) => {
+            const list = personas.length ? personas : [FALLBACK_PERSONA];
+            setPersona(list.find((p) => p.key === e.target.value) ?? persona);
+          }}
           className="bg-ink border border-white/15 rounded-lg px-3 py-2 text-sm"
         >
-          {PERSONAS.map((p) => (
+          {(personas.length ? personas : [FALLBACK_PERSONA]).map((p) => (
             <option key={p.key} value={p.key}>{p.label}</option>
           ))}
         </select>

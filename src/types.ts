@@ -116,6 +116,17 @@ export interface Product {
   updated_at: string;
 }
 
+// Persona du Simulateur d'entretien, configurable en back-office.
+export interface SimulatorPersona {
+  id: string;
+  key: string;
+  label: string;
+  prompt: string;
+  active: boolean;
+  position: number;
+  created_at: string;
+}
+
 // Étape de tunnel OTO (upsell/downsell post-achat), configurable en back-office.
 export interface OtoStep {
   id: string;

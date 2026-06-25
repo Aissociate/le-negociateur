@@ -12,6 +12,7 @@ const NAV = [
   { to: '/admin/oto', label: 'Tunnel OTO' },
   { to: '/admin/ab', label: 'A/B copy' },
   { to: '/admin/prompts', label: 'IA & Prompts' },
+  { to: '/admin/personas', label: 'Personas simulateur' },
   { to: '/admin/emails', label: 'Séquence emails' },
   { to: '/admin/orders', label: 'Commandes' },
   { to: '/admin/orchestration', label: 'Orchestration' },

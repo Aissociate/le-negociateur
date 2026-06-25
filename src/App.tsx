@@ -10,6 +10,7 @@ import Compte from './pages/Compte';
 import Simulateur from './pages/Simulateur';
 import Oto from './pages/Oto';
 import OtoConfig from './pages/admin/OtoConfig';
+import PersonasConfig from './pages/admin/PersonasConfig';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminLayout from './pages/admin/AdminLayout';
 import Dashboard from './pages/admin/Dashboard';
@@ -75,6 +76,7 @@ export default function App() {
         <Route path="oto" element={<OtoConfig />} />
         <Route path="ab" element={<ABResults />} />
         <Route path="prompts" element={<Prompts />} />
+        <Route path="personas" element={<PersonasConfig />} />
         <Route path="emails" element={<Emails />} />
         <Route path="orders" element={<Orders />} />
         <Route path="orchestration" element={<Orchestration />} />
