@@ -13,4 +13,15 @@ body {
   .no-print {
     display: none !important;
   }
+  h1,
+  h2,
+  h3 {
+    break-after: avoid;
+  }
+  ul,
+  ol,
+  blockquote,
+  pre {
+    break-inside: avoid;
+  }
 }

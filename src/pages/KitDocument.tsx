@@ -45,6 +45,12 @@ export default function KitDocument() {
         </button>
       </div>
       <div className="max-w-3xl mx-auto px-6 sm:px-8 py-12">
+        <div className="mb-8 pb-5 border-b-2 border-gold flex items-center justify-between">
+          <p className="font-display text-sm tracking-widest uppercase text-gold font-bold">Le Négociateur</p>
+          <p className="text-xs text-ink/40">
+            Dossier personnel &amp; confidentiel · {new Date(doc.created_at).toLocaleDateString('fr-FR')}
+          </p>
+        </div>
         <Markdown>{doc.content_md}</Markdown>
         <p className="mt-12 text-xs text-ink/40 border-t pt-4">
           Document personnel généré le {new Date(doc.created_at).toLocaleDateString('fr-FR')} — estimations

@@ -78,7 +78,12 @@ async function fulfill(session: Stripe.Checkout.Session): Promise<void> {
     ? await db.from('gap_reports').select('*').eq('id', lead.last_report_id).maybeSingle()
     : { data: null };
 
-  // 3. Génération du Kit (IA)
+  // 3. Génération du Kit (IA) — enrichie avec toutes les données factuelles du rapport
+  const gp = report?.gap_percent ?? 0;
+  const position =
+    gp >= 5 ? 'en dessous de la médiane' : gp <= -5 ? 'au-dessus de la médiane' : 'aligné sur la médiane';
+  const intel = (report?.intel ?? {}) as Record<string, unknown>;
+  const fmt = (v: unknown): string | number => (v === undefined || v === null ? 'n/c' : (v as string | number));
   const vars = {
     poste: report?.poste ?? lead?.poste ?? 'Cadre',
     secteur: report?.secteur ?? lead?.secteur ?? 'Tous secteurs',
@@ -89,9 +94,24 @@ async function fulfill(session: Stripe.Checkout.Session): Promise<void> {
     market_median: report?.market_median ?? 0,
     market_high: report?.market_high ?? 0,
     gap_annual: report?.gap_annual ?? 0,
-    gap_percent: report?.gap_percent ?? 0,
+    gap_percent: gp,
     segment: report?.segment ?? 'inconnu',
+    position,
     tension: report?.metier_en_tension ? 'oui' : 'non',
+    net_monthly: fmt(intel.net_monthly),
+    net_annual: fmt(intel.net_annual),
+    percentile: fmt(intel.percentile),
+    insee_verdict: fmt(intel.insee_verdict),
+    ft_tension: fmt(intel.ft_tension),
+    ft_offres: fmt(intel.ft_offres),
+    ft_salaire_min: fmt(intel.ft_salaire_min),
+    ft_salaire_max: fmt(intel.ft_salaire_max),
+    borrowing_current: fmt(intel.borrowing_current),
+    borrowing_target: fmt(intel.borrowing_target),
+    borrowing_uplift: fmt(intel.borrowing_uplift),
+    gap_5y: fmt(intel.gap_5y),
+    upside_to_high: fmt(intel.upside_to_high),
+    providers: (intel.providers_ok as string[] | undefined)?.join(', ') || 'référentiel interne',
   };
 
   let content: string;
