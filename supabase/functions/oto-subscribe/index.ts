@@ -1,6 +1,6 @@
 // OTO abonnement : crée une session Checkout d'abonnement en RÉUTILISANT le client
-// Stripe existant (carte déjà connue → quasi 1-clic), puis renvoie l'URL. Le
-// success/cancel renvoie vers /oto avec ?resume=1 pour terminer le tunnel (Kit).
+// Stripe existant (carte déjà connue), puis renvoie l'URL. Option `trial` =
+// 1er mois à 1€ (coupon Stripe ponctuel). Le retour pointe sur /oto?resume=1.
 
 import Stripe from 'npm:stripe@16';
 import { serviceClient } from '../_shared/db.ts';
@@ -11,10 +11,11 @@ Deno.serve(async (req) => {
   if (options) return options;
 
   try {
-    const { session, product_slug, token } = (await req.json()) as {
+    const { session, product_slug, token, trial } = (await req.json()) as {
       session: string;
       product_slug: string;
       token?: string;
+      trial?: boolean;
     };
     if (!session || !product_slug) return json({ error: 'Paramètres manquants.' }, 400);
 
@@ -34,9 +35,23 @@ Deno.serve(async (req) => {
     const siteUrl = Deno.env.get('SITE_URL') ?? 'http://localhost:5173';
     const resume = `${siteUrl}/oto?session=${encodeURIComponent(session)}&token=${encodeURIComponent(token ?? '')}&resume=1`;
 
+    // Essai 1er mois à 1€ : coupon ponctuel réduisant la 1re facture à 100 centimes.
+    // deno-lint-ignore no-explicit-any
+    const discounts: any[] = [];
+    if (trial && product.price_cents > 100) {
+      const coupon = await stripe.coupons.create({
+        amount_off: product.price_cents - 100,
+        currency: product.currency ?? 'eur',
+        duration: 'once',
+        name: '1er mois à 1€',
+      });
+      discounts.push({ coupon: coupon.id });
+    }
+
     const checkout = await stripe.checkout.sessions.create({
       mode: 'subscription',
       ...(order.stripe_customer_id ? { customer: order.stripe_customer_id } : { customer_email: order.email }),
+      ...(discounts.length ? { discounts } : {}),
       line_items: [
         {
           price_data: {
@@ -57,7 +72,7 @@ Deno.serve(async (req) => {
       email: order.email,
       stripe_session_id: checkout.id,
       stripe_customer_id: order.stripe_customer_id,
-      amount: product.price_cents,
+      amount: trial ? 100 : product.price_cents,
       product_slugs: [product.slug],
       status: 'pending',
     });

@@ -135,6 +135,7 @@ export interface OtoStep {
   subhead: string;
   upsell_slug: string;
   downsell_slug: string | null;
+  downsell_trial: boolean;
   active: boolean;
   created_at: string;
 }

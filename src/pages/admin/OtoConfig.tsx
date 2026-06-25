@@ -29,6 +29,7 @@ export default function OtoConfig() {
         subhead: s.subhead,
         upsell_slug: s.upsell_slug,
         downsell_slug: s.downsell_slug || null,
+        downsell_trial: s.downsell_trial,
         active: s.active,
       })
       .eq('id', s.id);
@@ -95,6 +96,11 @@ export default function OtoConfig() {
                 </select>
               </div>
             </div>
+
+            <label className="flex items-center gap-2 text-xs text-paper/60">
+              <input type="checkbox" checked={s.downsell_trial} onChange={(e) => update(s.id, { downsell_trial: e.target.checked })} />
+              Downsell abonnement : 1er mois à 1 €
+            </label>
 
             <div>
               <label className="block text-xs text-paper/50 mb-1">Titre (upsell)</label>

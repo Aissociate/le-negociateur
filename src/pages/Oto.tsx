@@ -48,6 +48,7 @@ export default function Oto() {
   const prod = (slug?: string | null) => products.find((p) => p.slug === slug);
   const step = steps[stepIndex];
   const offer = step ? (phase === 'upsell' ? prod(step.upsell_slug) : prod(step.downsell_slug)) : undefined;
+  const trial = !!(step && step.downsell_trial && phase === 'downsell' && offer?.kind === 'subscription');
 
   function advance() {
     setError('');
@@ -65,11 +66,25 @@ export default function Oto() {
     setError('');
     try {
       if (offer.kind === 'subscription') {
-        const { url } = await callFunction<{ url: string }>('oto-subscribe', { session, product_slug: offer.slug, token });
+        const useTrial = phase === 'downsell' && !!step?.downsell_trial;
+        const { url } = await callFunction<{ url: string }>('oto-subscribe', {
+          session,
+          product_slug: offer.slug,
+          token,
+          trial: useTrial,
+        });
         window.location.href = url;
         return;
       }
-      await callFunction('oto-charge', { session, product_slug: offer.slug });
+      const res = await callFunction<{ ok?: boolean; requires_action?: boolean; url?: string }>('oto-charge', {
+        session,
+        product_slug: offer.slug,
+        token,
+      });
+      if (res.requires_action && res.url) {
+        window.location.href = res.url; // fallback SCA (3-D Secure)
+        return;
+      }
       advance();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erreur.');
@@ -97,8 +112,12 @@ export default function Oto() {
         <div className="flex items-baseline justify-between">
           <h2 className="font-display text-xl font-bold">{offer.name}</h2>
           <p className="font-display text-2xl font-bold">
-            {euros(offer.price_cents)}
-            {offer.kind === 'subscription' && <span className="text-sm font-normal">/mois</span>}
+            {trial ? '1 €' : euros(offer.price_cents)}
+            {offer.kind === 'subscription' && (
+              <span className="text-sm font-normal">
+                {trial ? ` le 1er mois, puis ${euros(offer.price_cents)}/mois` : '/mois'}
+              </span>
+            )}
           </p>
         </div>
         <p className="text-ink/70 text-sm mt-2">{offer.description_md}</p>
@@ -109,7 +128,11 @@ export default function Oto() {
           className="mt-5 w-full bg-ink text-paper font-bold py-3.5 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2 hover:bg-ink/90 transition"
         >
           {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-          {offer.kind === 'subscription' ? 'Oui, activer maintenant' : `Oui, ajouter en 1 clic — ${euros(offer.price_cents)}`}
+          {offer.kind === 'subscription'
+            ? trial
+              ? 'Oui, activer pour 1 €'
+              : 'Oui, activer maintenant'
+            : `Oui, ajouter en 1 clic — ${euros(offer.price_cents)}`}
         </button>
         {offer.kind !== 'subscription' && (
           <p className="text-center text-xs text-ink/40 mt-2">Débité sur la carte de votre commande, sans ressaisie.</p>

@@ -1,5 +1,6 @@
-// OTO 1-clic : facture un produit one-shot sur la carte mémorisée du client
-// (off-session), sans nouvelle saisie. Capability = l'id de session Stripe initiale.
+// OTO 1-clic : facture un produit one-shot sur la carte mémorisée (off-session),
+// sans ressaisie. Si la carte exige une authentification (SCA / 3-D Secure),
+// fallback vers un Checkout hébergé pour finaliser, puis reprise du tunnel.
 
 import Stripe from 'npm:stripe@16';
 import { serviceClient } from '../_shared/db.ts';
@@ -10,7 +11,11 @@ Deno.serve(async (req) => {
   if (options) return options;
 
   try {
-    const { session, product_slug } = (await req.json()) as { session: string; product_slug: string };
+    const { session, product_slug, token } = (await req.json()) as {
+      session: string;
+      product_slug: string;
+      token?: string;
+    };
     if (!session || !product_slug) return json({ error: 'Paramètres manquants.' }, 400);
 
     const db = serviceClient();
@@ -29,35 +34,74 @@ Deno.serve(async (req) => {
     if (product.kind === 'subscription') return json({ error: 'Produit récurrent : utilisez le checkout.' }, 400);
 
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, { apiVersion: '2024-06-20' });
+    const siteUrl = Deno.env.get('SITE_URL') ?? 'http://localhost:5173';
+
     const pms = await stripe.paymentMethods.list({ customer: order.stripe_customer_id, type: 'card', limit: 1 });
     const pm = pms.data[0];
     if (!pm) return json({ error: 'Carte introuvable.' }, 400);
 
-    const pi = await stripe.paymentIntents.create({
-      amount: product.price_cents,
-      currency: product.currency ?? 'eur',
-      customer: order.stripe_customer_id,
-      payment_method: pm.id,
-      off_session: true,
-      confirm: true,
-      description: `OTO — ${product.name}`,
-    });
-    if (pi.status !== 'succeeded') return json({ error: 'Paiement non confirmé.' }, 402);
+    try {
+      const pi = await stripe.paymentIntents.create({
+        amount: product.price_cents,
+        currency: product.currency ?? 'eur',
+        customer: order.stripe_customer_id,
+        payment_method: pm.id,
+        off_session: true,
+        confirm: true,
+        description: `OTO — ${product.name}`,
+      });
+      if (pi.status !== 'succeeded') throw new Error(`PI status ${pi.status}`);
 
-    await db.from('orders').insert({
-      lead_id: order.lead_id,
-      email: order.email,
-      stripe_session_id: null,
-      stripe_customer_id: order.stripe_customer_id,
-      amount: product.price_cents,
-      product_slugs: [product.slug],
-      status: 'paid',
-      paid_at: new Date().toISOString(),
-    });
-
-    return json({ ok: true });
+      await db.from('orders').insert({
+        lead_id: order.lead_id,
+        email: order.email,
+        stripe_session_id: null,
+        stripe_customer_id: order.stripe_customer_id,
+        amount: product.price_cents,
+        product_slugs: [product.slug],
+        status: 'paid',
+        paid_at: new Date().toISOString(),
+      });
+      return json({ ok: true });
+    } catch (err) {
+      // deno-lint-ignore no-explicit-any
+      const code = (err as any)?.code ?? (err as any)?.raw?.code;
+      if (code === 'authentication_required') {
+        // Fallback SCA : checkout hébergé (3-D Secure), reprise du tunnel au retour.
+        const resume = `${siteUrl}/oto?session=${encodeURIComponent(session)}&token=${encodeURIComponent(token ?? '')}&resume=1`;
+        const checkout = await stripe.checkout.sessions.create({
+          mode: 'payment',
+          customer: order.stripe_customer_id,
+          line_items: [
+            {
+              price_data: {
+                currency: product.currency ?? 'eur',
+                unit_amount: product.price_cents,
+                product_data: { name: product.name },
+              },
+              quantity: 1,
+            },
+          ],
+          payment_intent_data: { setup_future_usage: 'off_session' },
+          success_url: resume,
+          cancel_url: resume,
+        });
+        await db.from('orders').insert({
+          lead_id: order.lead_id,
+          email: order.email,
+          stripe_session_id: checkout.id,
+          stripe_customer_id: order.stripe_customer_id,
+          amount: product.price_cents,
+          product_slugs: [product.slug],
+          status: 'pending',
+        });
+        return json({ requires_action: true, url: checkout.url });
+      }
+      console.error(err);
+      return json({ error: 'Paiement refusé (carte ou solde insuffisant).' }, 402);
+    }
   } catch (err) {
     console.error(err);
-    return json({ error: 'Le paiement en 1 clic a échoué (carte refusée ou authentification requise).' }, 402);
+    return json({ error: 'Erreur interne.' }, 500);
   }
 });

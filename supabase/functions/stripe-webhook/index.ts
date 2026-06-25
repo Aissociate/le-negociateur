@@ -72,6 +72,10 @@ async function fulfill(session: Stripe.Checkout.Session): Promise<void> {
     .update({ status: 'paid', paid_at: new Date().toISOString(), stripe_customer_id: custId ?? null })
     .eq('id', order.id);
 
+  // Ne générer un Kit que pour les produits "document" (pas un OTO simulateur/bouclier seul).
+  const docSlugs = ['kit', 'pack-carriere', 'argumentaire-eclair'];
+  if (!((order.product_slugs ?? []) as string[]).some((s) => docSlugs.includes(s))) return;
+
   // 2. Lead + dernier rapport (pour personnaliser le Kit)
   const { data: lead } = order.lead_id
     ? await db.from('leads').select('*').eq('id', order.lead_id).maybeSingle()
