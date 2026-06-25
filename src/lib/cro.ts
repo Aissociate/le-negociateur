@@ -15,6 +15,10 @@ export const SOCIAL_PROOF = {
   ],
 };
 
+// Seuil à partir duquel on affiche le compteur RÉEL d'analyses (en dessous, on
+// garde le texte générique pour éviter un chiffre peu flatteur au démarrage).
+export const SOCIAL_PROOF_MIN_COUNT = 100;
+
 export const TRUST_BADGES = [
   'Données publiques sourcées (INSEE · DARES · APEC)',
   'Sans spam · désinscription en 1 clic',

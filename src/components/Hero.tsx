@@ -1,5 +1,6 @@
 import { ArrowRight, Star } from 'lucide-react';
-import { SOCIAL_PROOF } from '../lib/cro';
+import { SOCIAL_PROOF, SOCIAL_PROOF_MIN_COUNT } from '../lib/cro';
+import { useAnalysesCount } from '../lib/useAnalysesCount';
 
 const videoUrl = import.meta.env.VITE_HERO_VIDEO_URL as string | undefined;
 const posterUrl = import.meta.env.VITE_HERO_POSTER_URL as string | undefined;
@@ -10,6 +11,11 @@ const posterUrl = import.meta.env.VITE_HERO_POSTER_URL as string | undefined;
  * questionnaire (ancre #questionnaire).
  */
 export default function Hero() {
+  const count = useAnalysesCount();
+  const statText =
+    count != null && count >= SOCIAL_PROOF_MIN_COUNT
+      ? `${count.toLocaleString('fr-FR')} analyses réalisées`
+      : SOCIAL_PROOF.stat;
   const scrollToForm = () =>
     document.getElementById('questionnaire')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -52,7 +58,7 @@ export default function Hero() {
             <Star key={i} className="w-4 h-4 fill-current" />
           ))}
           <span className="text-xs text-paper/60 ml-2">
-            {SOCIAL_PROOF.rating} · {SOCIAL_PROOF.stat}
+            {SOCIAL_PROOF.rating} · {statText}
           </span>
         </div>
       </div>

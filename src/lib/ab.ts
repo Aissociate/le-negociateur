@@ -43,6 +43,39 @@ export const CAPTURE_EXPERIMENT: Experiment = {
         reassurance: 'Analyse gratuite · 30 secondes · données 2025',
       },
     },
+    {
+      key: 'argent',
+      weight: 1,
+      content: {
+        headline: 'Combien laissez-vous sur la table chaque année ?',
+        subhead:
+          "Un salaire sous le marché se cumule : sur 5 ans, l'écart se chiffre souvent en dizaines de milliers d'euros.",
+        cta: 'Calculer mon manque à gagner',
+        reassurance: 'Gratuit · chiffré · sans engagement',
+      },
+    },
+    {
+      key: 'tension',
+      weight: 1,
+      content: {
+        headline: 'Votre métier est en tension. Votre salaire le reflète-t-il ?',
+        subhead:
+          'Quand le marché manque de profils comme le vôtre, le rapport de force change. Voyez ce que vous valez vraiment.',
+        cta: 'Voir ce que vaut mon profil',
+        reassurance: 'Données France Travail / INSEE · 30 secondes',
+      },
+    },
+    {
+      key: 'preparation',
+      weight: 1,
+      content: {
+        headline: 'Préparez votre prochaine augmentation avec les bons chiffres.',
+        subhead:
+          'La différence entre ceux qui obtiennent une hausse et les autres ? La méthode et les données. Commencez par les vôtres.',
+        cta: 'Obtenir mes chiffres',
+        reassurance: 'Gratuit · sourcé · sans engagement',
+      },
+    },
   ],
 };
 

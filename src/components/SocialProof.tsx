@@ -1,9 +1,15 @@
 import { Star } from 'lucide-react';
-import { SOCIAL_PROOF } from '../lib/cro';
+import { SOCIAL_PROOF, SOCIAL_PROOF_MIN_COUNT } from '../lib/cro';
+import { useAnalysesCount } from '../lib/useAnalysesCount';
 
 /** Bandeau de preuve sociale compact : note + un témoignage. */
 export default function SocialProof({ index = 0 }: { index?: number }) {
   const t = SOCIAL_PROOF.testimonials[index % SOCIAL_PROOF.testimonials.length];
+  const count = useAnalysesCount();
+  const statText =
+    count != null && count >= SOCIAL_PROOF_MIN_COUNT
+      ? `${count.toLocaleString('fr-FR')} analyses réalisées`
+      : SOCIAL_PROOF.stat;
   return (
     <div className="text-center">
       <div className="flex items-center justify-center gap-1 text-gold">
@@ -11,7 +17,7 @@ export default function SocialProof({ index = 0 }: { index?: number }) {
           <Star key={i} className="w-3.5 h-3.5 fill-current" />
         ))}
         <span className="text-xs text-paper/50 ml-1">
-          {SOCIAL_PROOF.rating} · {SOCIAL_PROOF.stat}
+          {SOCIAL_PROOF.rating} · {statText}
         </span>
       </div>
       <blockquote className="text-sm text-paper/75 italic mt-2">« {t.quote} »</blockquote>
