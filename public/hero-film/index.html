@@ -18,50 +18,15 @@
 <body>
 <div id="root"></div>
 
-<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
-
-<script type="text/babel" src="animations.jsx"></script>
-<script type="text/babel" src="scenes.jsx"></script>
-
-<script type="text/babel">
-  const { Stage, SceneDouleur, SceneChiffre, SceneMethode, SceneGain, SceneCTA, useTimeline } = window;
-
-  function Seeker() {
-    const tl = useTimeline();
-    React.useEffect(() => {
-      window.__seek = (t) => { tl.setPlaying(false); tl.setTime(t); };
-      window.__play = () => tl.setPlaying(true);
-    }, [tl]);
-    const sec = Math.floor(tl.time);
-    React.useEffect(() => {
-      const root = document.getElementById('root');
-      if (root) root.setAttribute('data-screen-label', '00:' + String(sec).padStart(2, '0'));
-    }, [sec]);
-    return null;
-  }
-
-  const __params = new URLSearchParams(location.search);
-  const __seek = __params.get('t');
-  if (__seek != null) { try { localStorage.setItem('nego-film:t', __seek); } catch(e){} }
-  const __autoplay = __params.get('paused') !== '1';
-
-  function Film() {
-    return (
-      <Stage width={1920} height={1080} duration={30} background="var(--encre-950)"
-             fps={60} loop={true} autoplay={__autoplay} persistKey="nego-film">
-        <Seeker />
-        <SceneDouleur start={0}     end={6.2}  />
-        <SceneChiffre  start={6.0}  end={13.6} />
-        <SceneMethode  start={13.4} end={21.6} />
-        <SceneGain     start={21.4} end={27.6} />
-        <SceneCTA      start={27.4} end={30}   />
-      </Stage>
-    );
-  }
-
-  ReactDOM.createRoot(document.getElementById('root')).render(<Film />);
-</script>
+<!-- Pré-compilé : React production (local) + scènes transpilées. Zéro CDN, zéro Babel. -->
+<!-- Sources : animations.jsx, scenes.jsx, film.jsx. Recompiler :                       -->
+<!--   npx esbuild public/hero-film/animations.jsx public/hero-film/scenes.jsx \         -->
+<!--     public/hero-film/film.jsx --minify --jsx=transform --tsconfig-raw="{}" \        -->
+<!--     --outdir=public/hero-film                                                       -->
+<script src="vendor/react.production.min.js"></script>
+<script src="vendor/react-dom.production.min.js"></script>
+<script src="animations.js"></script>
+<script src="scenes.js"></script>
+<script src="film.js"></script>
 </body>
 </html>
