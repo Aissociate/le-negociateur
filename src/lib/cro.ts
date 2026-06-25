@@ -22,5 +22,5 @@ export const SOCIAL_PROOF_MIN_COUNT = 100;
 export const TRUST_BADGES = [
   'Données publiques sourcées (INSEE · DARES · APEC)',
   'Sans spam · désinscription en 1 clic',
-  'Vos données ne sont jamais revendues',
+  'Tes données ne sont jamais revendues',
 ];

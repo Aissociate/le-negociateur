@@ -117,7 +117,7 @@ export default function Questionnaire() {
     }
   };
 
-  const stepLabel = step === 5 ? 'Dernière étape — votre analyse vous attend' : `Étape ${step + 1} / ${TOTAL}`;
+  const stepLabel = step === 5 ? "Dernière étape — ton analyse t'attend" : `Étape ${step + 1} / ${TOTAL}`;
 
   return (
     <Layout narrow hero={<Hero />}>
@@ -131,7 +131,7 @@ export default function Questionnaire() {
 
       <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 sm:p-8">
         {step === 0 && (
-          <Question title="Votre niveau d'expérience ?" hint="Une seule question pour commencer — ça prend 30 secondes.">
+          <Question title="Ton niveau d'expérience ?" hint="Une seule question pour commencer — ça prend 30 secondes.">
             <OptionGrid options={SENIORITES} value={answers.seniorite} onSelect={(v) => pick('seniorite', v)} />
           </Question>
         )}
@@ -143,13 +143,13 @@ export default function Questionnaire() {
         )}
 
         {step === 2 && (
-          <Question title="Où travaillez-vous ?">
+          <Question title="Où travailles-tu ?">
             <OptionGrid options={LOCALISATIONS} value={answers.localisation} onSelect={(v) => pick('localisation', v)} />
           </Question>
         )}
 
         {step === 3 && (
-          <Question title="Quel est votre poste ?" hint="Intitulé le plus proche de votre fonction réelle.">
+          <Question title="Quel est ton poste ?" hint="Intitulé le plus proche de ta fonction réelle.">
             <input
               autoFocus
               value={answers.poste}
@@ -175,8 +175,8 @@ export default function Questionnaire() {
 
         {step === 4 && (
           <Question
-            title="Votre rémunération brute annuelle actuelle ?"
-            hint="Confidentiel — sert uniquement à calculer votre écart. Fixe + variable, en € bruts/an."
+            title="Ta rémunération brute annuelle actuelle ?"
+            hint="Confidentiel — sert uniquement à calculer ton écart. Fixe + variable, en € bruts/an."
           >
             <div className="relative">
               <input
@@ -198,15 +198,15 @@ export default function Questionnaire() {
             {/* Teaser verrouillé : le résultat est prêt, l'email le déverrouille */}
             <div className="rounded-2xl border border-gold/30 bg-gold/5 p-5 mb-5 text-center">
               <p className="text-xs text-paper/50">
-                {answers.poste || 'Votre poste'} · {answers.seniorite} · {answers.localisation}
+                {answers.poste || 'Ton poste'} · {answers.seniorite} · {answers.localisation}
               </p>
-              <p className="text-[11px] text-gold mt-2 uppercase tracking-widest">Votre écart de rémunération estimé</p>
+              <p className="text-[11px] text-gold mt-2 uppercase tracking-widest">Ton écart de rémunération estimé</p>
               <div className="relative inline-block mt-1">
                 <span className="font-display text-4xl font-bold blur-md select-none">+ ●·●●● €/an</span>
                 <Lock className="absolute inset-0 m-auto w-6 h-6 text-gold" />
               </div>
               <p className="text-xs text-paper/55 mt-2">
-                Votre analyse est prête. Entrez votre email pour révéler le <strong>chiffre exact</strong>.
+                Ton analyse est prête. Entre ton email pour révéler le <strong>chiffre exact</strong>.
               </p>
             </div>
 
@@ -220,7 +220,7 @@ export default function Questionnaire() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && submit()}
-                placeholder="votre@email.fr"
+                placeholder="ton@email.fr"
                 className={inputCls}
               />
               {error && <p className="text-ember text-sm">{error}</p>}
@@ -300,16 +300,16 @@ export default function Questionnaire() {
             >
               <X className="w-5 h-5" />
             </button>
-            <h3 className="font-display text-xl font-bold">Attendez — votre analyse est prête 🔓</h3>
+            <h3 className="font-display text-xl font-bold">Attends — ton analyse est prête 🔓</h3>
             <p className="text-paper/70 text-sm mt-2">
-              Ne partez pas sans découvrir votre écart de rémunération. Ça prend 5 secondes.
+              Ne pars pas sans découvrir ton écart de rémunération. Ça prend 5 secondes.
             </p>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && submit()}
-              placeholder="votre@email.fr"
+              placeholder="ton@email.fr"
               className={`${inputCls} mt-4`}
             />
             {error && <p className="text-ember text-sm mt-2">{error}</p>}

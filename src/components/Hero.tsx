@@ -52,10 +52,10 @@ export default function Hero() {
       <div className="max-w-3xl mx-auto px-4 pt-12 sm:pt-16 text-center">
         <p className="text-gold uppercase tracking-widest text-xs mb-4">Cadres &amp; métiers en tension</p>
         <h1 className="font-display text-3xl sm:text-5xl font-bold leading-tight">
-          Êtes-vous assez payé pour ce que vous savez faire&nbsp;?
+          Es-tu assez payé pour ce que tu sais faire&nbsp;?
         </h1>
         <p className="mt-4 text-paper/80 text-lg max-w-xl mx-auto">
-          Votre patron, lui, dirait oui. Découvrez en 30 secondes l'écart réel entre votre salaire et le marché.
+          Ton patron, lui, dirait oui. Découvre en 30 secondes l'écart réel entre ton salaire et le marché.
         </p>
       </div>
 

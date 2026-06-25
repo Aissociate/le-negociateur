@@ -101,7 +101,7 @@ export default function Oto() {
       <div className="text-center mb-5">
         <span className="text-ember text-xs font-bold uppercase tracking-widest">Offre unique — ne réapparaîtra pas</span>
         <h1 className="font-display text-2xl sm:text-3xl font-bold mt-2">
-          {phase === 'upsell' ? step.headline : 'Attendez — une alternative pour vous.'}
+          {phase === 'upsell' ? step.headline : 'Attends — une alternative pour toi.'}
         </h1>
         <p className="text-paper/70 mt-2">
           {phase === 'upsell' ? step.subhead : "Si ce n'est pas le moment, voici une option plus souple."}
@@ -138,7 +138,7 @@ export default function Oto() {
           <p className="flex items-center justify-center gap-1">
             <ShieldCheck className="w-3.5 h-3.5" /> Satisfait ou remboursé sous 30 jours
           </p>
-          {offer.kind !== 'subscription' && <p>Débité sur la carte de votre commande, sans ressaisie.</p>}
+          {offer.kind !== 'subscription' && <p>Débité sur la carte de ta commande, sans ressaisie.</p>}
         </div>
       </div>
 

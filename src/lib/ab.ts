@@ -17,7 +17,7 @@ export interface Experiment {
   variants: Variant[];
 }
 
-// Variantes par défaut de la capture email. Pitch central : « Votre patron dirait oui ».
+// Variantes par défaut de la capture email. Pitch central : « Ton patron dirait oui ».
 export const CAPTURE_EXPERIMENT: Experiment = {
   key: 'capture_copy',
   variants: [
@@ -25,9 +25,9 @@ export const CAPTURE_EXPERIMENT: Experiment = {
       key: 'patron',
       weight: 1,
       content: {
-        headline: 'Êtes-vous assez payé pour ce que vous savez faire ?',
+        headline: 'Es-tu assez payé pour ce que tu sais faire ?',
         subhead:
-          "Votre patron, lui, dirait oui. Découvrez en 30 secondes l'écart réel entre votre salaire et le marché.",
+          "Ton patron, lui, dirait oui. Découvre en 30 secondes l'écart réel entre ton salaire et le marché.",
         cta: 'Révéler mon écart de salaire',
         reassurance: 'Gratuit · données sourcées · sans engagement',
       },
@@ -36,9 +36,9 @@ export const CAPTURE_EXPERIMENT: Experiment = {
       key: 'marche',
       weight: 1,
       content: {
-        headline: 'Votre salaire est-il vraiment à la hauteur du marché ?',
+        headline: 'Ton salaire est-il vraiment à la hauteur du marché ?',
         subhead:
-          "Des milliers de cadres sont sous-payés sans le savoir. Voyez précisément où vous vous situez.",
+          "Des milliers de cadres sont sous-payés sans le savoir. Vois précisément où tu te situes.",
         cta: 'Voir mon positionnement',
         reassurance: 'Analyse gratuite · 30 secondes · données 2025',
       },
@@ -47,7 +47,7 @@ export const CAPTURE_EXPERIMENT: Experiment = {
       key: 'argent',
       weight: 1,
       content: {
-        headline: 'Combien laissez-vous sur la table chaque année ?',
+        headline: 'Combien laisses-tu sur la table chaque année ?',
         subhead:
           "Un salaire sous le marché se cumule : sur 5 ans, l'écart se chiffre souvent en dizaines de milliers d'euros.",
         cta: 'Calculer mon manque à gagner',
@@ -58,9 +58,9 @@ export const CAPTURE_EXPERIMENT: Experiment = {
       key: 'tension',
       weight: 1,
       content: {
-        headline: 'Votre métier est en tension. Votre salaire le reflète-t-il ?',
+        headline: 'Ton métier est en tension. Ton salaire le reflète-t-il ?',
         subhead:
-          'Quand le marché manque de profils comme le vôtre, le rapport de force change. Voyez ce que vous valez vraiment.',
+          'Quand le marché manque de profils comme le tien, le rapport de force change. Vois ce que tu vaux vraiment.',
         cta: 'Voir ce que vaut mon profil',
         reassurance: 'Données France Travail / INSEE · 30 secondes',
       },
@@ -69,9 +69,9 @@ export const CAPTURE_EXPERIMENT: Experiment = {
       key: 'preparation',
       weight: 1,
       content: {
-        headline: 'Préparez votre prochaine augmentation avec les bons chiffres.',
+        headline: 'Prépare ta prochaine augmentation avec les bons chiffres.',
         subhead:
-          'La différence entre ceux qui obtiennent une hausse et les autres ? La méthode et les données. Commencez par les vôtres.',
+          'La différence entre ceux qui obtiennent une hausse et les autres ? La méthode et les données. Commence par les tiennes.',
         cta: 'Obtenir mes chiffres',
         reassurance: 'Gratuit · sourcé · sans engagement',
       },

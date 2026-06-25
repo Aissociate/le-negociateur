@@ -31,7 +31,7 @@ import {
 const inputCls =
   'w-full bg-ink border border-white/15 rounded-lg px-3 py-2.5 text-paper placeholder-paper/30 focus:border-gold focus:outline-none text-sm';
 
-const STEPS = ['Votre emploi', 'Votre entreprise', 'Votre rémunération', 'Vos avantages', 'Vos réalisations'];
+const STEPS = ['Ton emploi', 'Ton entreprise', 'Ta rémunération', 'Tes avantages', 'Tes réalisations'];
 
 type El = { on: boolean; montant: string };
 
@@ -78,7 +78,7 @@ export default function Personnaliser() {
 
   async function submit() {
     if (!session) {
-      setError('Lien de personnalisation invalide. Utilisez le lien reçu après votre achat.');
+      setError('Lien de personnalisation invalide. Utilise le lien reçu après ton achat.');
       return;
     }
     setSubmitting(true);
@@ -119,7 +119,7 @@ export default function Personnaliser() {
     return (
       <Layout narrow>
         <div className="text-center py-16">
-          <p className="text-paper/70">Cette page personnalise votre Kit après achat. Utilisez le lien reçu par email.</p>
+          <p className="text-paper/70">Cette page personnalise ton Kit après achat. Utilise le lien reçu par email.</p>
         </div>
       </Layout>
     );
@@ -172,9 +172,9 @@ export default function Personnaliser() {
   return (
     <Layout narrow>
       <div className="text-center mb-6">
-        <h1 className="font-display text-2xl sm:text-3xl font-bold">Personnalisez votre Kit</h1>
+        <h1 className="font-display text-2xl sm:text-3xl font-bold">Personnalise ton Kit</h1>
         <p className="text-paper/60 text-sm mt-1">
-          Plus vous renseignez votre situation et vos réussites, plus votre Kit sera précis et redoutable.
+          Plus tu renseignes ta situation et tes réussites, plus ton Kit sera précis et redoutable.
         </p>
       </div>
 
@@ -192,24 +192,24 @@ export default function Personnaliser() {
         {step === 0 && (
           <>
             <div className="grid sm:grid-cols-2 gap-4">
-              <Sel label="Vous êtes" value={emploi.sexe} onChange={(v) => setE('sexe', v)} options={['Homme', 'Femme']} />
+              <Sel label="Tu es" value={emploi.sexe} onChange={(v) => setE('sexe', v)} options={['Homme', 'Femme']} />
               <Sel label="Année de naissance" value={emploi.annee_naissance} onChange={(v) => setE('annee_naissance', v)} options={ANNEES_NAISSANCE} />
               <Txt label="Ancienneté professionnelle totale (années)" value={emploi.anciennete_totale} onChange={(v) => setE('anciennete_totale', v.replace(/[^0-9]/g, ''))} placeholder="ex. 8" />
               <Txt label="Ancienneté dans la société (années)" value={emploi.anciennete_societe} onChange={(v) => setE('anciennete_societe', v.replace(/[^0-9]/g, ''))} placeholder="ex. 3" />
               <Sel label="Type de contrat" value={emploi.type_contrat} onChange={(v) => setE('type_contrat', v)} options={TYPES_CONTRAT} />
               <Sel label="Métier / emploi" value={emploi.metier} onChange={(v) => setE('metier', v)} options={METIERS} />
             </div>
-            <Txt label="Intitulé exact de votre poste (facultatif)" value={emploi.intitule_exact} onChange={(v) => setE('intitule_exact', v)} placeholder="ex. Lead Developer Frontend" />
+            <Txt label="Intitulé exact de ton poste (facultatif)" value={emploi.intitule_exact} onChange={(v) => setE('intitule_exact', v)} placeholder="ex. Lead Developer Frontend" />
             <div className="grid sm:grid-cols-2 gap-4">
               <Sel label="Statut actuel" value={emploi.statut} onChange={(v) => setE('statut', v)} options={STATUTS} />
               <Sel label="Niveau d'expertise" value={emploi.niveau_expertise} onChange={(v) => setE('niveau_expertise', v)} options={NIVEAUX_EXPERTISE} />
-              <Sel label="Nature de vos responsabilités" value={emploi.nature_responsabilites} onChange={(v) => setE('nature_responsabilites', v)} options={NATURES_RESPONSABILITES} />
+              <Sel label="Nature de tes responsabilités" value={emploi.nature_responsabilites} onChange={(v) => setE('nature_responsabilites', v)} options={NATURES_RESPONSABILITES} />
               <Sel label="Ces responsabilités portent sur" value={emploi.perimetre} onChange={(v) => setE('perimetre', v)} options={PERIMETRES} />
               <Sel label="Personnes encadrées au total" value={emploi.effectif_encadre} onChange={(v) => setE('effectif_encadre', v)} options={EFFECTIFS_ENCADRES} />
             </div>
             <Slider label="Jours de congés payés" value={emploi.conges_payes} max={40} onChange={(v) => setE('conges_payes', v)} />
             <Slider label="Jours de congés complémentaires (RTT…)" value={emploi.conges_complementaires} max={25} onChange={(v) => setE('conges_complementaires', v)} />
-            <ToggleRow label="Travaillez-vous à temps partiel ?" checked={emploi.temps_partiel} onChange={(v) => setE('temps_partiel', v)} />
+            <ToggleRow label="Travailles-tu à temps partiel ?" checked={emploi.temps_partiel} onChange={(v) => setE('temps_partiel', v)} />
             {emploi.temps_partiel && (
               <Txt label="Quotité (%)" value={emploi.quotite} onChange={(v) => setE('quotite', v.replace(/[^0-9]/g, ''))} placeholder="ex. 80" />
             )}
@@ -219,7 +219,7 @@ export default function Personnaliser() {
 
         {step === 1 && (
           <>
-            <Txt label="Nom de votre société (facultatif)" value={entreprise.nom} onChange={(v) => setC('nom', v)} placeholder="ex. WAAGE" />
+            <Txt label="Nom de ta société (facultatif)" value={entreprise.nom} onChange={(v) => setC('nom', v)} placeholder="ex. WAAGE" />
             <div className="grid sm:grid-cols-2 gap-4">
               <Sel label="Situation de la société" value={entreprise.situation} onChange={(v) => setC('situation', v)} options={SITUATIONS_SOCIETE} />
               <Txt label="Département (lieu de travail)" value={entreprise.departement} onChange={(v) => setC('departement', v)} placeholder="ex. 75, Paris" />
@@ -271,13 +271,13 @@ export default function Personnaliser() {
         {step === 4 && (
           <>
             <p className="text-sm text-paper/60">
-              C'est le carburant de votre argumentaire : vos résultats et votre trajectoire deviennent des arguments concrets dans votre Kit.
+              C'est le carburant de ton argumentaire : tes résultats et ta trajectoire deviennent des arguments concrets dans ton Kit.
             </p>
-            <Area label="Vos principales réussites professionnelles (résultats chiffrés, projets, CA apporté, économies générées…)" value={real.reussites} onChange={(v) => setReal((s) => ({ ...s, reussites: v }))} />
+            <Area label="Tes principales réussites professionnelles (résultats chiffrés, projets, CA apporté, économies générées…)" value={real.reussites} onChange={(v) => setReal((s) => ({ ...s, reussites: v }))} />
             <Area label="Évolutions / promotions récentes" value={real.evolutions} onChange={(v) => setReal((s) => ({ ...s, evolutions: v }))} rows={2} />
             <Txt label="Compétences ou certifications différenciantes" value={real.competences} onChange={(v) => setReal((s) => ({ ...s, competences: v }))} placeholder="ex. certification AWS, anglais courant…" />
-            <Txt label="Votre objectif (augmentation visée, promotion…)" value={real.objectif} onChange={(v) => setReal((s) => ({ ...s, objectif: v }))} placeholder="ex. +8 %, passage cadre dirigeant" />
-            <Slider label="Votre confiance pour négocier (1 à 5)" value={parseInt(real.confiance, 10)} max={5} min={1} onChange={(v) => setReal((s) => ({ ...s, confiance: String(v) }))} />
+            <Txt label="Ton objectif (augmentation visée, promotion…)" value={real.objectif} onChange={(v) => setReal((s) => ({ ...s, objectif: v }))} placeholder="ex. +8 %, passage cadre dirigeant" />
+            <Slider label="Ta confiance pour négocier (1 à 5)" value={parseInt(real.confiance, 10)} max={5} min={1} onChange={(v) => setReal((s) => ({ ...s, confiance: String(v) }))} />
             <Txt label="Contexte particulier (entretien à venir, date…)" value={real.contexte} onChange={(v) => setReal((s) => ({ ...s, contexte: v }))} placeholder="ex. entretien annuel dans 3 semaines" />
           </>
         )}
@@ -301,7 +301,7 @@ export default function Personnaliser() {
           ) : (
             <button type="button" onClick={submit} disabled={submitting} className="bg-gold text-ink font-semibold rounded-xl px-6 py-3 flex items-center gap-2 hover:brightness-105 disabled:opacity-60 transition">
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-              {submitting ? 'Génération de votre Kit…' : 'Générer mon Kit sur-mesure'}
+              {submitting ? 'Génération de ton Kit…' : 'Générer mon Kit sur-mesure'}
             </button>
           )}
         </div>

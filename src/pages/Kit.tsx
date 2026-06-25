@@ -7,7 +7,7 @@ import { Product } from '../types';
 const euros = (cents: number) => (cents / 100).toLocaleString('fr-FR') + ' €';
 
 const KIT_INCLUDED = [
-  'Argumentaire chiffré personnalisé (votre poste, votre marché, vos chiffres)',
+  'Argumentaire chiffré personnalisé (ton poste, ton marché, tes chiffres)',
   'Stratégie de négociation en 5 étapes',
   'Scripts mot à mot : demande, annonce du chiffre, silence, conclusion',
   'Réponses aux 12 objections les plus fréquentes',
@@ -39,7 +39,7 @@ export default function Kit() {
 
   async function checkout(slugs: string[]) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError('Entrez votre email (celui de votre analyse) pour continuer.');
+      setError('Entre ton email (celui de ton analyse) pour continuer.');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -60,7 +60,7 @@ export default function Kit() {
     <Layout narrow>
       <p className="text-gold tracking-widest uppercase text-xs mb-3 text-center">Passez à l'action</p>
       <h1 className="font-display text-3xl sm:text-4xl font-bold text-center leading-tight">
-        Transformez votre écart en <span className="text-gold italic">augmentation réelle</span>.
+        Transforme ton écart en <span className="text-gold italic">augmentation réelle</span>.
       </h1>
       <p className="mt-4 text-center text-paper/75 max-w-2xl mx-auto">
         La méthode, l'entraînement et la veille — pour ne plus jamais laisser d'argent sur la table.
@@ -72,7 +72,7 @@ export default function Kit() {
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="Votre email (celui de votre analyse)"
+          placeholder="Ton email (celui de ton analyse)"
           className="w-full rounded-lg bg-ink border border-white/15 px-4 py-3 text-paper placeholder-paper/30 focus:border-gold focus:outline-none"
         />
         {error && <p className="text-ember text-sm font-semibold mt-2">{error}</p>}
@@ -189,11 +189,11 @@ export default function Kit() {
         <h3 className="font-display text-xl font-bold text-paper">Questions fréquentes</h3>
         <p>
           <strong className="text-paper">Quelle différence entre les offres ?</strong> L'Argumentaire Éclair donne l'essentiel ;
-          le Kit, le dossier complet ; le Simulateur vous entraîne ; le Bouclier vous garde armé dans la durée. Le Pack réunit tout.
+          le Kit, le dossier complet ; le Simulateur t'entraîne ; le Bouclier te garde armé dans la durée. Le Pack réunit tout.
         </p>
         <p>
-          <strong className="text-paper">Est-ce adapté à mon métier ?</strong> Tout est généré à partir de votre analyse (poste,
-          secteur, séniorité, région) : chiffres et arguments sont les vôtres.
+          <strong className="text-paper">Est-ce adapté à mon métier ?</strong> Tout est généré à partir de ton analyse (poste,
+          secteur, séniorité, région) : chiffres et arguments sont les tiens.
         </p>
         <p>
           <strong className="text-paper">Garantie.</strong> Satisfait ou remboursé sous 30 jours, sans justification.

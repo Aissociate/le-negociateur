@@ -39,8 +39,8 @@ export default function Merci() {
         <CheckCircle2 className="mx-auto text-gold mb-6" size={56} />
         <h1 className="font-display text-3xl font-bold mb-3">Paiement confirmé 🎉</h1>
         <p className="text-paper/80 mb-8 max-w-lg mx-auto">
-          Dernière étape pour un Kit <strong>vraiment sur-mesure</strong> : renseignez votre situation complète et vos
-          réussites (3 min). Votre Kit sera régénéré avec tous ces éléments.
+          Dernière étape pour un Kit <strong>vraiment sur-mesure</strong> : renseigne ta situation complète et tes
+          réussites (3 min). Ton Kit sera régénéré avec tous ces éléments.
         </p>
         {sessionId && (
           <Link
@@ -56,7 +56,7 @@ export default function Merci() {
               ou accéder directement à mon Kit standard
             </Link>
           ) : (
-            <p className="text-paper/40 text-xs">Votre Kit standard se prépare aussi (lien envoyé par email).</p>
+            <p className="text-paper/40 text-xs">Ton Kit standard se prépare aussi (lien envoyé par email).</p>
           )}
         </div>
       </div>

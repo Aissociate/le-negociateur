@@ -68,10 +68,10 @@ export default function Compte() {
         <div className="max-w-sm mx-auto py-12">
           <h1 className="font-display text-2xl font-bold text-center mb-2">Mon espace</h1>
           <p className="text-paper/60 text-sm text-center mb-6">
-            Connectez-vous avec l'email de votre achat — on vous envoie un lien magique, sans mot de passe.
+            Connecte-toi avec l'email de ton achat — on t'envoie un lien magique, sans mot de passe.
           </p>
           {sent ? (
-            <p className="text-gold text-center">Lien envoyé ✦ vérifiez votre boîte mail.</p>
+            <p className="text-gold text-center">Lien envoyé ✦ vérifie ta boîte mail.</p>
           ) : (
             <form onSubmit={sendLink} className="space-y-3">
               <input
@@ -79,7 +79,7 @@ export default function Compte() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="votre@email.fr"
+                placeholder="ton@email.fr"
                 className="w-full rounded-lg bg-ink border border-white/15 px-4 py-3 focus:border-gold focus:outline-none"
               />
               {err && <p className="text-ember text-sm">{err}</p>}
@@ -118,7 +118,7 @@ export default function Compte() {
               </Link>
             ) : (
               <p className="text-paper/60 text-sm">
-                Accès inactif. <Link to="/kit" className="text-gold underline">Ajoutez le Simulateur</Link> pour vous entraîner en illimité.
+                Accès inactif. <Link to="/kit" className="text-gold underline">Ajoute le Simulateur</Link> pour t'entraîner en illimité.
               </p>
             )}
           </Section>
