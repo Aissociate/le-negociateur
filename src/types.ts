@@ -23,7 +23,25 @@ export interface GapReport {
   source: string;
   annee: number;
   metier_en_tension: boolean;
+  intel?: SalaryIntelNormalized;
   created_at: string;
+}
+
+// Données factuelles agrégées (sources externes) attachées au rapport.
+export interface SalaryIntelNormalized {
+  net_monthly?: number;
+  net_annual?: number;
+  net_ratio?: number;
+  percentile?: number;
+  insee_verdict?: string;
+  ft_tension?: string | number;
+  ft_offres?: number;
+  borrowing_current?: number;
+  borrowing_target?: number;
+  borrowing_uplift?: number;
+  gap_5y?: number;
+  upside_to_high?: number;
+  providers_ok?: string[];
 }
 
 export interface Lead {

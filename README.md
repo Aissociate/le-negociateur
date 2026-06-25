@@ -47,6 +47,7 @@ npm run dev
    - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
    - `RESEND_API_KEY`, `EMAIL_FROM`
    - `APIFY_API_KEY`, `APIFY_APOLLO_ACTOR` — agent de prospection
+   - `FT_CLIENT_ID`, `FT_CLIENT_SECRET`, `FT_SCOPE`, `FT_MARCHE_TRAVAIL_URL` — France Travail (optionnel, agrégation salaires)
    - `SITE_URL` — URL publique du site
 5. Activer les crons : exécuter `supabase/cron.sql` (remplacer les 2 placeholders).
 
@@ -67,6 +68,18 @@ Référentiel `salary_benchmarks` orienté **cadres CSP+ / métiers en tension**
 dev, product, R&D, supply chain…), avec **code ROME**, **score de tension** et sources publiques
 (INSEE base Tous salariés, DARES métiers en tension, APEC). Mise à jour : l'agent `maj_benchmarks`
 propose des ajustements hebdo dans `/admin/benchmarks` — **rien n'est appliqué sans validation humaine**.
+
+### Agrégation multi-sources par prospect
+
+À chaque soumission, `rapport-ecart` agrège (best-effort, tolérant aux pannes) des **données externes
+en temps réel** propres au prospect et les sauve dans `salary_intel` :
+- **calculer-salaire.com** (public) : brut→net + cotisations, percentile INSEE ;
+- **moicombien.fr** (public) : capacité d'emprunt (projection chiffrée du bénéfice) ;
+- **France Travail – Marché du travail** (OAuth2, optionnel) : tension, offres, salaires proposés par ROME.
+
+Ces faits + des projections calculées (écart cumulé 5 ans, marge haut de fourchette, gain de capacité
+d'emprunt) nourrissent un **compte-rendu IA éducatif et factuel** qui conclut sur l'offre produit —
+que le prospect soit en dessous **ou** au-dessus de la médiane.
 
 ## Back-office (`/admin`)
 

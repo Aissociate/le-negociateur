@@ -41,8 +41,10 @@ rapport de force favorable). Marque unique, deux temps : **diagnostic gratuit** 
 
 ## Pistes suivantes (non bloquantes)
 
-- **Ingestion réelle des datasets publics** (INSEE/DARES/APEC) : aujourd'hui le référentiel est seedé
-  + curé par IA ; brancher un import automatisé des fichiers publics.
+- ✅ **Agrégation multi-sources par prospect** (`salary_intel`) : calculer-salaire.com, moicombien.fr,
+  France Travail (OAuth2). Best-effort, sauvegardée, utilisée par le compte-rendu IA.
+- **Ingestion en masse des datasets publics** (INSEE/DARES/APEC) pour enrichir le référentiel de base
+  (en complément de l'agrégation temps réel par prospect ci-dessus).
 - **Définir le contenu réel de l'upsell** (placeholder « Accompagnement Premium » à 99 €).
 - **Séquence d'outreach** sur les prospects scorés (emails B2B conformes, opt-out, A/B).
 - **Espace abonné** si offre récurrente (« Bouclier »).

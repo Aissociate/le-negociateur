@@ -1,10 +1,13 @@
 // Agent "Rapport d'écart" : reçoit le questionnaire, capture le lead (consentement
-// horodaté + variante A/B), calcule l'écart salarial à partir de `salary_benchmarks`,
-// génère l'analyse IA, programme la séquence d'emails, renvoie l'id du rapport.
+// horodaté + variante A/B), calcule l'écart à partir de `salary_benchmarks`,
+// AGRÈGE des données externes multi-sources par prospect (France Travail,
+// calculer-salaire, moicombien), les sauve dans `salary_intel`, génère l'analyse
+// IA enrichie + factuelle, programme la séquence d'emails, renvoie l'id du rapport.
 
 import { serviceClient } from '../_shared/db.ts';
 import { handleOptions, json } from '../_shared/cors.ts';
 import { callLLM } from '../_shared/llm.ts';
+import { aggregateSalaryIntel } from '../_shared/salary_sources.ts';
 
 interface Input {
   poste: string;
@@ -78,23 +81,34 @@ Deno.serve(async (req) => {
     const tension = !!match.metier_en_tension;
 
     const segment =
-      gapPercent >= 15
-        ? 'sous-payé fort'
-        : gapPercent >= 5
-          ? 'sous-payé léger'
-          : gapPercent >= -5
-            ? 'aligné'
-            : 'au-dessus';
+      gapPercent >= 15 ? 'sous-payé fort' : gapPercent >= 5 ? 'sous-payé léger' : gapPercent >= -5 ? 'aligné' : 'au-dessus';
+    const position =
+      gapPercent >= 5 ? 'en dessous de la médiane' : gapPercent <= -5 ? 'au-dessus de la médiane' : 'aligné sur la médiane';
 
-    // 3. Lead (upsert par email) + programmation du premier email
-    const { data: firstEmail } = await db
-      .from('email_sequences')
-      .select('delay_hours')
-      .eq('step', 1)
-      .single();
-    const nextEmailAt = new Date(
-      Date.now() + (firstEmail?.delay_hours ?? 1) * 3600 * 1000
-    ).toISOString();
+    // 3. Agrégation multi-sources externes (best-effort, ne bloque jamais)
+    let intel = { sources: {}, normalized: { providers_ok: [] as string[] } as Record<string, unknown> };
+    try {
+      intel = await aggregateSalaryIntel({
+        poste: input.poste,
+        secteur: input.secteur,
+        seniorite: input.seniorite,
+        localisation: input.localisation,
+        remuneration_actuelle: input.remuneration_actuelle,
+        code_rome: match.code_rome ?? null,
+        market_median: marketMedian,
+      });
+    } catch (_) {
+      /* best-effort */
+    }
+
+    // Projections chiffrées (factuelles, calculées serveur)
+    const gap5y = gapAnnual > 0 ? gapAnnual * 5 : 0;
+    const upsideToHigh = Math.max(0, marketHigh - input.remuneration_actuelle);
+    const reportIntel = { ...intel.normalized, gap_5y: gap5y, upside_to_high: upsideToHigh };
+
+    // 4. Lead (upsert par email) + programmation du premier email
+    const { data: firstEmail } = await db.from('email_sequences').select('delay_hours').eq('step', 1).single();
+    const nextEmailAt = new Date(Date.now() + (firstEmail?.delay_hours ?? 1) * 3600 * 1000).toISOString();
 
     const { data: lead, error: leadError } = await db
       .from('leads')
@@ -121,7 +135,9 @@ Deno.serve(async (req) => {
       .single();
     if (leadError) throw leadError;
 
-    // 4. Analyse IA (repli sur un texte standard si l'agent échoue)
+    // 5. Analyse IA enrichie (repli sur un texte standard si l'agent échoue)
+    const n = intel.normalized;
+    const fmt = (v: unknown): string | number => (v === undefined || v === null ? 'n/c' : (v as string | number));
     const vars = {
       poste: input.poste,
       secteur: input.secteur,
@@ -134,7 +150,20 @@ Deno.serve(async (req) => {
       gap_annual: gapAnnual,
       gap_percent: gapPercent,
       segment,
+      position,
       tension: tension ? 'oui' : 'non',
+      net_monthly: fmt(n.net_monthly),
+      net_annual: fmt(n.net_annual),
+      percentile: fmt(n.percentile),
+      insee_verdict: fmt(n.insee_verdict),
+      ft_tension: fmt(n.ft_tension),
+      ft_offres: fmt(n.ft_offres),
+      borrowing_current: fmt(n.borrowing_current),
+      borrowing_target: fmt(n.borrowing_target),
+      borrowing_uplift: fmt(n.borrowing_uplift),
+      gap_5y: gap5y,
+      upside_to_high: upsideToHigh,
+      providers: (n.providers_ok as string[] | undefined)?.join(', ') || 'référentiel interne',
     };
     let analysis = '';
     try {
@@ -143,7 +172,7 @@ Deno.serve(async (req) => {
       analysis = fallbackAnalysis(vars);
     }
 
-    // 5. Rapport
+    // 6. Rapport (avec données factuelles agrégées attachées)
     const { data: report, error: reportError } = await db
       .from('gap_reports')
       .insert({
@@ -163,12 +192,27 @@ Deno.serve(async (req) => {
         source: match.source,
         annee: match.annee,
         metier_en_tension: tension,
+        intel: reportIntel,
       })
       .select()
       .single();
     if (reportError) throw reportError;
 
     await db.from('leads').update({ last_report_id: report.id }).eq('id', lead.id);
+
+    // 7. Sauvegarde de la collecte multi-sources par prospect (audit + réutilisation)
+    await db.from('salary_intel').insert({
+      lead_id: lead.id,
+      report_id: report.id,
+      poste: input.poste.trim(),
+      secteur: input.secteur,
+      seniorite: input.seniorite,
+      localisation: input.localisation,
+      code_rome: match.code_rome ?? null,
+      remuneration_actuelle: input.remuneration_actuelle,
+      sources: intel.sources,
+      normalized: reportIntel,
+    });
 
     return json({ report_id: report.id });
   } catch (err) {
@@ -183,13 +227,13 @@ function fallbackAnalysis(v: Record<string, string | number>): string {
   return [
     `## Votre lecture du marché`,
     under
-      ? `Pour un profil **${v.poste}** (${v.seniorite}) en ${v.localisation}, la médiane du marché se situe à **${Number(v.market_median).toLocaleString('fr-FR')} €** bruts annuels. Votre rémunération actuelle se trouve **${Math.abs(Number(v.gap_percent))}% en dessous** de cette médiane, soit un manque à gagner estimé de **${Number(v.gap_annual).toLocaleString('fr-FR')} € par an**.${tension ? ' Votre métier est par ailleurs **en tension** : le rapport de force vous est favorable, le marché bouge vite.' : ''}`
-      : `Pour un profil **${v.poste}** (${v.seniorite}) en ${v.localisation}, vous vous situez au-dessus de la médiane du marché (**${Number(v.market_median).toLocaleString('fr-FR')} €**). L'enjeu n'est plus de rattraper le marché mais de **sécuriser et valoriser** cette position.`,
+      ? `Pour un profil **${v.poste}** (${v.seniorite}) en ${v.localisation}, la médiane du marché se situe à **${Number(v.market_median).toLocaleString('fr-FR')} €** bruts annuels. Votre rémunération actuelle se trouve **${Math.abs(Number(v.gap_percent))}% en dessous** de cette médiane, soit un manque à gagner estimé de **${Number(v.gap_annual).toLocaleString('fr-FR')} € par an**.${tension ? ' Votre métier est par ailleurs **en tension** : le rapport de force vous est favorable.' : ''}`
+      : `Pour un profil **${v.poste}** (${v.seniorite}) en ${v.localisation}, vous vous situez au niveau ou au-dessus de la médiane du marché (**${Number(v.market_median).toLocaleString('fr-FR')} €**). L'enjeu est de **sécuriser et viser le haut de fourchette** (jusqu'à ${Number(v.market_high).toLocaleString('fr-FR')} €).`,
     `## Ce que cela signifie concrètement`,
     under
-      ? `- Sur 5 ans sans correction, l'écart cumulé dépasse **${(Number(v.gap_annual) * 5).toLocaleString('fr-FR')} €**, sans compter l'effet sur vos cotisations retraite et vos futures négociations (chaque salaire sert de base au suivant).\n- Cet écart est un **argument**, pas une fatalité : il se négocie, à condition d'arriver préparé, chiffres en main.`
-      : `- Votre position favorable est un atout dans toute discussion : mobilité interne, promotion, ou négociation externe.\n- Le risque principal est l'érosion : sans réévaluation régulière, l'inflation et l'évolution du marché grignotent votre avance.`,
+      ? `- Sur 5 ans sans correction, l'écart cumulé dépasse **${(Number(v.gap_annual) * 5).toLocaleString('fr-FR')} €**, sans compter l'effet sur vos cotisations retraite et vos futures négociations.\n- Cet écart est un **argument**, pas une fatalité : il se négocie, chiffres en main.`
+      : `- Votre position est un atout : elle se défend et se fait fructifier (promotion, mobilité, haut de fourchette).\n- Le risque est l'érosion : sans réévaluation régulière, l'inflation grignote votre avance.`,
     `## La prochaine étape`,
-    `La différence entre les cadres qui obtiennent une augmentation et les autres tient rarement à la valeur — elle tient à la **méthode de négociation**. C'est exactement ce que prépare Le Négociateur.`,
+    `La différence entre les cadres qui obtiennent une augmentation et les autres tient à la **méthode**. C'est exactement ce que prépare Le Négociateur.`,
   ].join('\n\n');
 }

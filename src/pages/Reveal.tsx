@@ -56,6 +56,13 @@ export default function Reveal() {
   const marker = Math.min(100, Math.max(0, ((report.remuneration_actuelle - report.market_low) / span) * 100));
   const medianPos = Math.min(100, Math.max(0, ((report.market_median - report.market_low) / span) * 100));
 
+  const intel = report.intel ?? {};
+  const facts: { label: string; value: string }[] = [];
+  if (intel.net_annual != null) facts.push({ label: 'Net estimé / an', value: euros(intel.net_annual) });
+  if (intel.percentile != null) facts.push({ label: 'Percentile INSEE', value: `${intel.percentile}e` });
+  if (intel.borrowing_uplift) facts.push({ label: "Capacité d'emprunt en +", value: euros(intel.borrowing_uplift) });
+  if (intel.upside_to_high) facts.push({ label: 'Marge haut de fourchette', value: euros(intel.upside_to_high) });
+
   return (
     <Layout narrow>
       {report.metier_en_tension && (
@@ -95,13 +102,26 @@ export default function Reveal() {
         </div>
       </div>
 
+      {/* Faits clés (données externes agrégées) */}
+      {facts.length > 0 && (
+        <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {facts.map((f) => (
+            <div key={f.label} className="bg-white/[0.03] border border-white/10 rounded-xl p-3">
+              <p className="text-[11px] text-paper/40">{f.label}</p>
+              <p className="font-display font-bold text-gold">{f.value}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Analyse IA */}
       <div className="mt-8 prose-invert max-w-none text-paper/85">
         <Markdown>{report.analysis_md}</Markdown>
       </div>
 
       <p className="mt-4 text-xs text-paper/40">
-        Source : {report.source} ({report.annee}). Estimation indicative, non contractuelle.
+        Sources : {report.source} ({report.annee})
+        {intel.providers_ok?.length ? ` · ${intel.providers_ok.join(' · ')}` : ''}. Estimations indicatives, non contractuelles.
       </p>
 
       {/* CTA vers le Kit */}
