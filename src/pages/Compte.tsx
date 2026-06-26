@@ -68,10 +68,10 @@ export default function Compte() {
         <div className="max-w-sm mx-auto py-12">
           <h1 className="font-display text-2xl font-bold text-center mb-2">Mon espace</h1>
           <p className="text-paper/60 text-sm text-center mb-6">
-            Connecte-toi avec l'email de ton achat — on t'envoie un lien magique, sans mot de passe.
+            Connectez-vous avec l'email de votre achat — on vous envoie un lien magique, sans mot de passe.
           </p>
           {sent ? (
-            <p className="text-gold text-center">Lien envoyé ✦ vérifie ta boîte mail.</p>
+            <p className="text-gold text-center">Lien envoyé ✦ vérifiez votre boîte mail.</p>
           ) : (
             <form onSubmit={sendLink} className="space-y-3">
               <input
@@ -79,7 +79,7 @@ export default function Compte() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="ton@email.fr"
+                placeholder="votre@email.fr"
                 className="w-full rounded-lg bg-ink border border-white/15 px-4 py-3 focus:border-gold focus:outline-none"
               />
               {err && <p className="text-ember text-sm">{err}</p>}
@@ -111,27 +111,32 @@ export default function Compte() {
         <p className="text-paper/50 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Chargement…</p>
       ) : (
         <div className="space-y-5">
-          <Section icon={<Bot className="w-5 h-5 text-gold" />} title="Agent Recruteur IA">
+          <Section icon={<Bot className="w-5 h-5 text-gold" />} title="Simulateur d'entretien">
             {data.entitlements.simulator ? (
               <Link to="/simulateur" className="inline-block bg-gold text-ink font-bold px-5 py-2.5 rounded-lg hover:brightness-105 transition">
-                Lancer l'entraînement →
+                Lancer le simulateur →
               </Link>
             ) : (
               <p className="text-paper/60 text-sm">
-                Accès inactif. <Link to="/kit" className="text-gold underline">Ajoute l'Agent Recruteur IA</Link> pour t'entraîner en illimité.
+                Accès inactif. <Link to="/kit" className="text-gold underline">Ajoutez le Simulateur</Link> pour vous entraîner en illimité.
               </p>
             )}
           </Section>
 
-          {/* Gestion d'abonnement conservée pour les abonnés Bouclier historiques (offre arrêtée). */}
-          {data.entitlements.bouclier && (
-            <Section icon={<Repeat className="w-5 h-5 text-gold" />} title="Abonnement Bouclier">
-              <p className="text-sm text-emerald-400 mb-2">Actif ✓</p>
-              <button onClick={manageSub} className="text-sm bg-white/10 hover:bg-white/15 px-4 py-2 rounded-lg transition">
-                Gérer mon abonnement
-              </button>
-            </Section>
-          )}
+          <Section icon={<Repeat className="w-5 h-5 text-gold" />} title="Abonnement Bouclier">
+            {data.entitlements.bouclier ? (
+              <div>
+                <p className="text-sm text-emerald-400 mb-2">Actif ✓</p>
+                <button onClick={manageSub} className="text-sm bg-white/10 hover:bg-white/15 px-4 py-2 rounded-lg transition">
+                  Gérer mon abonnement
+                </button>
+              </div>
+            ) : (
+              <p className="text-paper/60 text-sm">
+                Inactif. <Link to="/kit" className="text-gold underline">Découvrir le Bouclier</Link>.
+              </p>
+            )}
+          </Section>
 
           <Section icon={<FileText className="w-5 h-5 text-gold" />} title="Mes documents">
             {data.deliverables.length ? (

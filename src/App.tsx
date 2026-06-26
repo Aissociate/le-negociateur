@@ -1,7 +1,6 @@
 import { Suspense, lazy } from 'react';
 import { Routes, Route, Link } from 'react-router-dom';
 import Layout from './components/Layout';
-import Landing from './pages/Landing';
 import Questionnaire from './pages/Questionnaire';
 import Reveal from './pages/Reveal';
 import Kit from './pages/Kit';
@@ -10,7 +9,6 @@ import Kit from './pages/Kit';
 const Merci = lazy(() => import('./pages/Merci'));
 const KitDocument = lazy(() => import('./pages/KitDocument'));
 const Personnaliser = lazy(() => import('./pages/Personnaliser'));
-const Formation = lazy(() => import('./pages/Formation'));
 const Oto = lazy(() => import('./pages/Oto'));
 const Compte = lazy(() => import('./pages/Compte'));
 const Simulateur = lazy(() => import('./pages/Simulateur'));
@@ -48,14 +46,12 @@ export default function App() {
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-paper/40">…</div>}>
       <Routes>
         {/* Public */}
-        <Route path="/" element={<Landing />} />
-        <Route path="/analyse" element={<Questionnaire />} />
+        <Route path="/" element={<Questionnaire />} />
         <Route path="/rapport/:id" element={<Reveal />} />
         <Route path="/kit" element={<Kit />} />
         <Route path="/merci" element={<Merci />} />
         <Route path="/kit/document/:token" element={<KitDocument />} />
         <Route path="/personnaliser" element={<Personnaliser />} />
-        <Route path="/formation" element={<Formation />} />
         <Route path="/compte" element={<Compte />} />
         <Route path="/simulateur" element={<Simulateur />} />
         <Route path="/oto" element={<Oto />} />

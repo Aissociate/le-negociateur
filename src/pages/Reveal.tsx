@@ -34,7 +34,7 @@ export default function Reveal() {
         <div className="text-center py-16">
           <AlertTriangle className="w-10 h-10 text-ember mx-auto mb-4" />
           <p className="text-paper/70">{error}</p>
-          <Link to="/analyse" className="text-gold underline mt-4 inline-block">Recommencer l'analyse</Link>
+          <Link to="/" className="text-gold underline mt-4 inline-block">Recommencer l'analyse</Link>
         </div>
       </Layout>
     );
@@ -45,7 +45,7 @@ export default function Reveal() {
       <Layout narrow>
         <div className="text-center py-24 text-paper/50">
           <Loader2 className="w-8 h-8 animate-spin mx-auto mb-3" />
-          Révélation de ton écart…
+          Révélation de votre écart…
         </div>
       </Layout>
     );
@@ -72,7 +72,7 @@ export default function Reveal() {
       )}
 
       <p className="text-paper/50 text-sm">{report.poste} · {report.secteur} · {report.seniorite}</p>
-      <h1 className="text-3xl sm:text-4xl font-display font-bold mt-1">Ton écart de rémunération</h1>
+      <h1 className="text-3xl sm:text-4xl font-display font-bold mt-1">Votre écart de rémunération</h1>
 
       {/* Chiffre choc */}
       <div className="mt-6 bg-white/[0.03] border border-white/10 rounded-2xl p-6">
@@ -90,7 +90,7 @@ export default function Reveal() {
         {/* Barre de positionnement marché */}
         <div className="mt-6">
           <div className="relative h-2 rounded-full bg-gradient-to-r from-ember/40 via-gold/40 to-emerald-500/40">
-            <div className="absolute -top-1.5 w-1 h-5 bg-paper rounded" style={{ left: `${marker}%` }} title="Toi" />
+            <div className="absolute -top-1.5 w-1 h-5 bg-paper rounded" style={{ left: `${marker}%` }} title="Vous" />
             <div className="absolute -bottom-1.5 w-0.5 h-4 bg-paper/40" style={{ left: `${medianPos}%` }} title="Médiane" />
           </div>
           <div className="flex justify-between text-xs text-paper/40 mt-3">
@@ -98,7 +98,7 @@ export default function Reveal() {
             <span>médiane {euros(report.market_median)}</span>
             <span>{euros(report.market_high)}</span>
           </div>
-          <p className="text-xs text-paper/40 mt-1">Toi : {euros(report.remuneration_actuelle)}</p>
+          <p className="text-xs text-paper/40 mt-1">Vous : {euros(report.remuneration_actuelle)}</p>
         </div>
       </div>
 
@@ -131,8 +131,8 @@ export default function Reveal() {
           <div>
             <h2 className="text-xl font-display font-semibold">Récupérez cet écart.</h2>
             <p className="text-paper/70 text-sm mt-1">
-              Le Kit de Négociation génère, sur-mesure pour ton poste, l'argumentaire chiffré, les scripts et la
-              stratégie pour obtenir l'augmentation que tu mérites.
+              Le Kit de Négociation génère, sur-mesure pour votre poste, l'argumentaire chiffré, les scripts et la
+              stratégie pour obtenir l'augmentation que vous méritez.
             </p>
             <Link
               to={`/kit?report=${report.id}`}

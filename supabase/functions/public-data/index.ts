@@ -14,13 +14,6 @@ Deno.serve(async (req) => {
   const url = new URL(req.url);
   const db = serviceClient();
 
-  // Compteur public d'analyses générées (preuve sociale honnête et dynamique).
-  const stat = url.searchParams.get('stat');
-  if (stat === 'analyses') {
-    const { count } = await db.from('gap_reports').select('id', { count: 'exact', head: true });
-    return json({ analyses: count ?? 0 });
-  }
-
   const reportId = url.searchParams.get('report');
   if (reportId) {
     const { data } = await db.from('gap_reports').select('*').eq('id', reportId).maybeSingle();
