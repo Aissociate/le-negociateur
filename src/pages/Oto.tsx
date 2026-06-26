@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Loader2, Check, X } from 'lucide-react';
+import { Loader2, Check, X, ShieldCheck } from 'lucide-react';
 import Layout from '../components/Layout';
 import { supabase, callFunction } from '../lib/supabase';
 import { Product, OtoStep } from '../types';
@@ -101,7 +101,7 @@ export default function Oto() {
       <div className="text-center mb-5">
         <span className="text-ember text-xs font-bold uppercase tracking-widest">Offre unique — ne réapparaîtra pas</span>
         <h1 className="font-display text-2xl sm:text-3xl font-bold mt-2">
-          {phase === 'upsell' ? step.headline : 'Attendez — une alternative pour vous.'}
+          {phase === 'upsell' ? step.headline : 'Attends — une alternative pour toi.'}
         </h1>
         <p className="text-paper/70 mt-2">
           {phase === 'upsell' ? step.subhead : "Si ce n'est pas le moment, voici une option plus souple."}
@@ -134,9 +134,12 @@ export default function Oto() {
               : 'Oui, activer maintenant'
             : `Oui, ajouter en 1 clic — ${euros(offer.price_cents)}`}
         </button>
-        {offer.kind !== 'subscription' && (
-          <p className="text-center text-xs text-ink/40 mt-2">Débité sur la carte de votre commande, sans ressaisie.</p>
-        )}
+        <div className="mt-3 space-y-1 text-center text-xs text-ink/45">
+          <p className="flex items-center justify-center gap-1">
+            <ShieldCheck className="w-3.5 h-3.5" /> Satisfait ou remboursé sous 30 jours
+          </p>
+          {offer.kind !== 'subscription' && <p>Débité sur la carte de ta commande, sans ressaisie.</p>}
+        </div>
       </div>
 
       <button

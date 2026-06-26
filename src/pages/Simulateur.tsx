@@ -121,8 +121,8 @@ export default function Simulateur() {
     return (
       <Layout narrow>
         <div className="text-center py-16">
-          <p className="text-paper/70 mb-4">Le Simulateur d'Entretien nécessite un accès actif.</p>
-          <Link to="/kit" className="bg-gold text-ink font-bold px-5 py-3 rounded-lg inline-block">Activer le Simulateur</Link>
+          <p className="text-paper/70 mb-4">L'Agent Recruteur IA nécessite un accès actif.</p>
+          <Link to="/kit" className="bg-gold text-ink font-bold px-5 py-3 rounded-lg inline-block">Activer l'Agent Recruteur IA</Link>
         </div>
       </Layout>
     );
@@ -131,7 +131,7 @@ export default function Simulateur() {
   return (
     <Layout narrow>
       <div className="flex items-center justify-between mb-4 gap-3">
-        <h1 className="font-display text-2xl font-bold">Simulateur d'entretien</h1>
+        <h1 className="font-display text-2xl font-bold">Agent Recruteur IA</h1>
         <select
           value={persona.key}
           onChange={(e) => {
@@ -149,7 +149,7 @@ export default function Simulateur() {
       <div ref={scrollRef} className="h-[55vh] overflow-y-auto rounded-2xl border border-white/10 bg-white/[0.02] p-4 space-y-3">
         {messages.length === 0 && !busy && (
           <p className="text-paper/40 text-sm text-center py-10">
-            Choisissez un persona puis lancez l'entretien. L'IA joue le recruteur, connaît votre situation et mène la discussion.
+            Choisis un persona puis lance l'entretien. L'IA joue le recruteur, connaît ta situation et mène la discussion.
           </p>
         )}
         {messages.map((m, i) => (
@@ -182,7 +182,7 @@ export default function Simulateur() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && input.trim() && !busy) userSend(input.trim()); }}
-              placeholder="Votre réponse…"
+              placeholder="Ta réponse…"
               className="flex-1 bg-ink border border-white/15 rounded-xl px-4 py-3 text-sm focus:border-gold focus:outline-none"
             />
             <button onClick={() => input.trim() && userSend(input.trim())} disabled={busy || !input.trim()} className="p-3 rounded-xl bg-gold text-ink disabled:opacity-50 shrink-0">
