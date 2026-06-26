@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { ArrowRight, Star } from 'lucide-react';
 import { SOCIAL_PROOF, SOCIAL_PROOF_MIN_COUNT } from '../lib/cro';
 import { useAnalysesCount } from '../lib/useAnalysesCount';
@@ -14,8 +15,8 @@ const filmUrl = filmEnv === 'off' ? undefined : filmEnv || '/hero-film/index.htm
 
 /**
  * Hero plein écran avec vidéo de fond (configurable via VITE_HERO_VIDEO_URL).
- * Repli sur un dégradé si aucune vidéo n'est fournie. Le CTA défile vers le
- * questionnaire (ancre #questionnaire).
+ * Repli sur un dégradé si aucune vidéo n'est fournie. Le CTA mène au
+ * questionnaire de capture (/analyse).
  */
 export default function Hero() {
   const count = useAnalysesCount();
@@ -23,8 +24,6 @@ export default function Hero() {
     count != null && count >= SOCIAL_PROOF_MIN_COUNT
       ? `${count.toLocaleString('fr-FR')} analyses réalisées`
       : SOCIAL_PROOF.stat;
-  const scrollToForm = () =>
-    document.getElementById('questionnaire')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   // Chargement différé du film : le Hero (texte + CTA) s'affiche d'abord.
   const [showFilm, setShowFilm] = useState(false);
@@ -84,12 +83,12 @@ export default function Hero() {
 
       {/* 3) CTA + réassurance + sources + note, après la vidéo */}
       <div className="max-w-3xl mx-auto px-4 pt-8 pb-12 sm:pb-16 text-center">
-        <button
-          onClick={scrollToForm}
+        <Link
+          to="/analyse"
           className="bg-gold text-ink font-bold px-8 py-4 rounded-xl hover:brightness-105 transition inline-flex items-center gap-2"
         >
           Tester ma rémunération <ArrowRight className="w-5 h-5" />
-        </button>
+        </Link>
         <p className="mt-3 text-xs text-paper/50">Gratuit · données sourcées · sans engagement</p>
         <Sources />
         <div className="mt-6 flex items-center justify-center gap-1 text-gold">

@@ -107,8 +107,8 @@ export default function Personnaliser() {
           throw e;
         }
       }
-      // Tunnel OTO (upsell/downsell) avant la remise du Kit final.
-      navigate(`/oto?session=${encodeURIComponent(session)}&token=${token}`);
+      // Les upsells (order bump + formation) ont déjà eu lieu : on remet directement le Kit final.
+      navigate(`/kit/document/${token}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Une erreur est survenue. Réessayez.');
       setSubmitting(false);

@@ -39,15 +39,15 @@ export default function Merci() {
         <CheckCircle2 className="mx-auto text-gold mb-6" size={56} />
         <h1 className="font-display text-3xl font-bold mb-3">Paiement confirmé 🎉</h1>
         <p className="text-paper/80 mb-8 max-w-lg mx-auto">
-          Dernière étape pour un Kit <strong>vraiment sur-mesure</strong> : renseigne ta situation complète et tes
-          réussites (3 min). Ton Kit sera régénéré avec tous ces éléments.
+          Ton paiement est confirmé. Encore quelques étapes rapides et ton Kit sera <strong>vraiment sur-mesure</strong>
+          {' '}— on a même une opportunité à te montrer juste avant.
         </p>
         {sessionId && (
           <Link
-            to={`/personnaliser?session=${sessionId}`}
+            to={`/formation?session=${sessionId}`}
             className="inline-flex items-center gap-2 bg-gold text-ink font-bold px-8 py-4 rounded-lg hover:brightness-105 transition"
           >
-            <Sparkles className="w-5 h-5" /> Personnaliser mon Kit (3 min)
+            <Sparkles className="w-5 h-5" /> Continuer
           </Link>
         )}
         <div className="mt-6">

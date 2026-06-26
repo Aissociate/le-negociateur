@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Lock, Loader2, ShieldCheck, X } from 'lucide-react';
 import Layout from '../components/Layout';
-import Hero from '../components/Hero';
 import SocialProof from '../components/SocialProof';
 import { SECTEURS, SENIORITES, LOCALISATIONS } from '../types';
 import { callFunction } from '../lib/supabase';
@@ -120,7 +119,14 @@ export default function Questionnaire() {
   const stepLabel = step === 5 ? "Dernière étape — ton analyse t'attend" : `Étape ${step + 1} / ${TOTAL}`;
 
   return (
-    <Layout narrow hero={<Hero />}>
+    <Layout narrow>
+      <div className="text-center mb-8">
+        <h1 className="font-display text-2xl sm:text-3xl font-bold leading-tight">
+          Ton écart de rémunération, en 30 secondes
+        </h1>
+        <p className="text-paper/60 text-sm mt-1">5 questions rapides · analyse gratuite · données sourcées</p>
+      </div>
+
       {/* Barre de progression */}
       <div className="mb-8" id="questionnaire">
         <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">

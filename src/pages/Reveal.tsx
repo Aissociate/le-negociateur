@@ -34,7 +34,7 @@ export default function Reveal() {
         <div className="text-center py-16">
           <AlertTriangle className="w-10 h-10 text-ember mx-auto mb-4" />
           <p className="text-paper/70">{error}</p>
-          <Link to="/" className="text-gold underline mt-4 inline-block">Recommencer l'analyse</Link>
+          <Link to="/analyse" className="text-gold underline mt-4 inline-block">Recommencer l'analyse</Link>
         </div>
       </Layout>
     );

@@ -111,32 +111,27 @@ export default function Compte() {
         <p className="text-paper/50 flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Chargement…</p>
       ) : (
         <div className="space-y-5">
-          <Section icon={<Bot className="w-5 h-5 text-gold" />} title="Simulateur d'entretien">
+          <Section icon={<Bot className="w-5 h-5 text-gold" />} title="Agent Recruteur IA">
             {data.entitlements.simulator ? (
               <Link to="/simulateur" className="inline-block bg-gold text-ink font-bold px-5 py-2.5 rounded-lg hover:brightness-105 transition">
-                Lancer le simulateur →
+                Lancer l'entraînement →
               </Link>
             ) : (
               <p className="text-paper/60 text-sm">
-                Accès inactif. <Link to="/kit" className="text-gold underline">Ajoute le Simulateur</Link> pour t'entraîner en illimité.
+                Accès inactif. <Link to="/kit" className="text-gold underline">Ajoute l'Agent Recruteur IA</Link> pour t'entraîner en illimité.
               </p>
             )}
           </Section>
 
-          <Section icon={<Repeat className="w-5 h-5 text-gold" />} title="Abonnement Bouclier">
-            {data.entitlements.bouclier ? (
-              <div>
-                <p className="text-sm text-emerald-400 mb-2">Actif ✓</p>
-                <button onClick={manageSub} className="text-sm bg-white/10 hover:bg-white/15 px-4 py-2 rounded-lg transition">
-                  Gérer mon abonnement
-                </button>
-              </div>
-            ) : (
-              <p className="text-paper/60 text-sm">
-                Inactif. <Link to="/kit" className="text-gold underline">Découvrir le Bouclier</Link>.
-              </p>
-            )}
-          </Section>
+          {/* Gestion d'abonnement conservée pour les abonnés Bouclier historiques (offre arrêtée). */}
+          {data.entitlements.bouclier && (
+            <Section icon={<Repeat className="w-5 h-5 text-gold" />} title="Abonnement Bouclier">
+              <p className="text-sm text-emerald-400 mb-2">Actif ✓</p>
+              <button onClick={manageSub} className="text-sm bg-white/10 hover:bg-white/15 px-4 py-2 rounded-lg transition">
+                Gérer mon abonnement
+              </button>
+            </Section>
+          )}
 
           <Section icon={<FileText className="w-5 h-5 text-gold" />} title="Mes documents">
             {data.deliverables.length ? (

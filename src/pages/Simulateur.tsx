@@ -121,8 +121,8 @@ export default function Simulateur() {
     return (
       <Layout narrow>
         <div className="text-center py-16">
-          <p className="text-paper/70 mb-4">Le Simulateur d'Entretien nécessite un accès actif.</p>
-          <Link to="/kit" className="bg-gold text-ink font-bold px-5 py-3 rounded-lg inline-block">Activer le Simulateur</Link>
+          <p className="text-paper/70 mb-4">L'Agent Recruteur IA nécessite un accès actif.</p>
+          <Link to="/kit" className="bg-gold text-ink font-bold px-5 py-3 rounded-lg inline-block">Activer l'Agent Recruteur IA</Link>
         </div>
       </Layout>
     );
@@ -131,7 +131,7 @@ export default function Simulateur() {
   return (
     <Layout narrow>
       <div className="flex items-center justify-between mb-4 gap-3">
-        <h1 className="font-display text-2xl font-bold">Simulateur d'entretien</h1>
+        <h1 className="font-display text-2xl font-bold">Agent Recruteur IA</h1>
         <select
           value={persona.key}
           onChange={(e) => {
