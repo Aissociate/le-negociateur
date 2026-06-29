@@ -18,15 +18,10 @@
 <body>
 <div id="root"></div>
 
-<!-- Pré-compilé : React production (local) + scènes transpilées. Zéro CDN, zéro Babel. -->
-<!-- Sources : animations.jsx, scenes.jsx, film.jsx. Recompiler :                       -->
-<!--   npx esbuild public/hero-film/animations.jsx public/hero-film/scenes.jsx \         -->
-<!--     public/hero-film/film.jsx --minify --jsx=transform --tsconfig-raw="{}" \        -->
-<!--     --outdir=public/hero-film                                                       -->
-<script src="vendor/react.production.min.js"></script>
-<script src="vendor/react-dom.production.min.js"></script>
-<script src="animations.js"></script>
-<script src="scenes.js"></script>
-<script src="film.js"></script>
+<!-- Pré-compilé : bundle auto-suffisant (React inclus). Recompiler :                    -->
+<!--   npx esbuild public/hero-film/entry.js --bundle \                                  -->
+<!--     --inject:public/hero-film/react-inject.js --format=iife \                       -->
+<!--     --outfile=public/hero-film/film-bundle.js                                       -->
+<script src="film-bundle.js"></script>
 </body>
 </html>

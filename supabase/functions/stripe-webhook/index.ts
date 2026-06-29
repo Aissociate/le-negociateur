@@ -1,177 +1,191 @@
-// Webhook Stripe : à la confirmation du paiement, marque la commande payée,
-// arrête la séquence email du lead (devenu client), génère le Kit personnalisé
-// (IA) et l'envoie par email. La réponse 200 part immédiatement (waitUntil) pour
-// rester sous le timeout Stripe.
+import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
+import Stripe from 'npm:stripe@17.7.0';
+import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
 
-import Stripe from 'npm:stripe@16';
-import { serviceClient } from '../_shared/db.ts';
-import { callLLM } from '../_shared/llm.ts';
-import { sendEmail } from '../_shared/email.ts';
-import { baseKitVars } from '../_shared/kit.ts';
-
-const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, { apiVersion: '2024-06-20' });
-const cryptoProvider = Stripe.createSubtleCryptoProvider();
-
-Deno.serve(async (req) => {
-  const signature = req.headers.get('stripe-signature');
-  const body = await req.text();
-
-  let event: Stripe.Event;
-  try {
-    event = await stripe.webhooks.constructEventAsync(
-      body,
-      signature!,
-      Deno.env.get('STRIPE_WEBHOOK_SECRET')!,
-      undefined,
-      cryptoProvider
-    );
-  } catch (err) {
-    console.error('Signature webhook invalide', err);
-    return new Response('Bad signature', { status: 400 });
-  }
-
-  // deno-lint-ignore no-explicit-any
-  const er = (globalThis as any).EdgeRuntime;
-  const run = async (p: Promise<unknown>) => (er?.waitUntil ? er.waitUntil(p) : await p);
-
-  if (event.type === 'checkout.session.completed') {
-    const session = event.data.object as Stripe.Checkout.Session;
-    await run(session.mode === 'subscription' ? fulfillSubscription(session) : fulfill(session));
-  } else if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.deleted') {
-    await updateSubscriptionStatus(event.data.object as Stripe.Subscription);
-  }
-
-  return new Response(JSON.stringify({ received: true }), {
-    headers: { 'Content-Type': 'application/json' },
-  });
+const stripeSecret = Deno.env.get('STRIPE_SECRET_KEY')!;
+const stripeWebhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET')!;
+const stripe = new Stripe(stripeSecret, {
+  appInfo: {
+    name: 'Bolt Integration',
+    version: '1.0.0',
+  },
 });
 
-async function fulfill(session: Stripe.Checkout.Session): Promise<void> {
-  const db = serviceClient();
+const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
-  // 1. Commande payée (idempotent : si un livrable existe déjà, on ne régénère pas)
-  const { data: order } = await db
-    .from('orders')
-    .select('*')
-    .eq('stripe_session_id', session.id)
-    .maybeSingle();
-  if (!order) {
-    console.error(`Commande introuvable pour la session ${session.id}`);
+Deno.serve(async (req) => {
+  try {
+    // Handle OPTIONS request for CORS preflight
+    if (req.method === 'OPTIONS') {
+      return new Response(null, { status: 204 });
+    }
+
+    if (req.method !== 'POST') {
+      return new Response('Method not allowed', { status: 405 });
+    }
+
+    // get the signature from the header
+    const signature = req.headers.get('stripe-signature');
+
+    if (!signature) {
+      return new Response('No signature found', { status: 400 });
+    }
+
+    // get the raw body
+    const body = await req.text();
+
+    // verify the webhook signature
+    let event: Stripe.Event;
+
+    try {
+      event = await stripe.webhooks.constructEventAsync(body, signature, stripeWebhookSecret);
+    } catch (error: any) {
+      console.error(`Webhook signature verification failed: ${error.message}`);
+      return new Response(`Webhook signature verification failed: ${error.message}`, { status: 400 });
+    }
+
+    EdgeRuntime.waitUntil(handleEvent(event));
+
+    return Response.json({ received: true });
+  } catch (error: any) {
+    console.error('Error processing webhook:', error);
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+});
+
+async function handleEvent(event: Stripe.Event) {
+  const stripeData = event?.data?.object ?? {};
+
+  if (!stripeData) {
     return;
   }
-  const { data: existing } = await db
-    .from('deliverables')
-    .select('id')
-    .eq('order_id', order.id)
-    .maybeSingle();
-  if (existing) return;
 
-  const custId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
-  await db
-    .from('orders')
-    .update({ status: 'paid', paid_at: new Date().toISOString(), stripe_customer_id: custId ?? null })
-    .eq('id', order.id);
-
-  // Ne générer un Kit que pour les produits "document" (pas un OTO simulateur/bouclier seul).
-  const docSlugs = ['kit', 'pack-carriere', 'argumentaire-eclair'];
-  if (!((order.product_slugs ?? []) as string[]).some((s) => docSlugs.includes(s))) return;
-
-  // 2. Lead + dernier rapport (pour personnaliser le Kit)
-  const { data: lead } = order.lead_id
-    ? await db.from('leads').select('*').eq('id', order.lead_id).maybeSingle()
-    : await db.from('leads').select('*').eq('email', order.email).maybeSingle();
-
-  if (lead) {
-    await db.from('leads').update({ statut: 'client', next_email_at: null }).eq('id', lead.id);
+  if (!('customer' in stripeData)) {
+    return;
   }
 
-  const { data: report } = lead?.last_report_id
-    ? await db.from('gap_reports').select('*').eq('id', lead.last_report_id).maybeSingle()
-    : { data: null };
-
-  // 3. Génération du livrable baseline. « argumentaire-eclair » seul -> version allégée.
-  const orderSlugs = (order.product_slugs ?? []) as string[];
-  const eclairOnly =
-    orderSlugs.includes('argumentaire-eclair') &&
-    !orderSlugs.includes('kit') &&
-    !orderSlugs.includes('pack-carriere');
-  const docAgent = eclairOnly ? 'argumentaire_eclair' : 'kit_offensif';
-  const vars = { ...baseKitVars(report, lead), profil_detaille: 'n/c', realisations: 'n/c' };
-
-  let content: string;
-  try {
-    content = (await callLLM(db, docAgent, vars)).text;
-  } catch (err) {
-    console.error('Génération du Kit échouée', err);
-    content =
-      `# Kit de Négociation\n\nVotre Kit personnalisé est en cours de préparation. ` +
-      `Notre équipe a été alertée et vous le recevrez par email sous 24 h. ` +
-      `En cas de question : répondez simplement à l'email de confirmation.`;
+  // for one time payments, we only listen for the checkout.session.completed event
+  if (event.type === 'payment_intent.succeeded' && event.data.object.invoice === null) {
+    return;
   }
 
-  // 4. Livrable + email de livraison
-  const token = crypto.randomUUID().replaceAll('-', '') + crypto.randomUUID().replaceAll('-', '');
-  await db.from('deliverables').insert({
-    order_id: order.id,
-    lead_id: lead?.id ?? null,
-    type: 'kit_offensif',
-    content_md: content,
-    access_token: token,
-  });
+  const { customer: customerId } = stripeData;
 
-  const siteUrl = Deno.env.get('SITE_URL') ?? 'http://localhost:5173';
-  try {
-    await sendEmail(
-      order.email,
-      'Votre Kit de Négociation est prêt — personnalisez-le pour un dossier sur-mesure',
-      `<p>Bonjour,</p>
-       <p>Merci pour votre confiance. Votre <strong>Kit de Négociation</strong> est prêt :</p>
-       <p><a href="${siteUrl}/kit/document/${token}" style="display:inline-block;background:#c9a227;color:#10141a;padding:12px 24px;border-radius:8px;font-weight:bold;text-decoration:none">Accéder à mon Kit</a></p>
-       <p><strong>Pour un dossier encore plus précis</strong> — avec votre package de rémunération complet et vos réussites professionnelles — prenez 3 minutes pour le personnaliser :</p>
-       <p><a href="${siteUrl}/personnaliser?session=${session.id}" style="display:inline-block;background:#10141a;color:#f6f3ec;padding:12px 24px;border-radius:8px;font-weight:bold;text-decoration:none">Personnaliser mon Kit</a></p>
-       <p>Bonne négociation,<br/>Le Négociateur</p>`
-    );
-  } catch (err) {
-    console.error("Envoi de l'email de livraison échoué", err);
+  if (!customerId || typeof customerId !== 'string') {
+    console.error(`No customer received on event: ${JSON.stringify(event)}`);
+  } else {
+    let isSubscription = true;
+
+    if (event.type === 'checkout.session.completed') {
+      const { mode } = stripeData as Stripe.Checkout.Session;
+
+      isSubscription = mode === 'subscription';
+
+      console.info(`Processing ${isSubscription ? 'subscription' : 'one-time payment'} checkout session`);
+    }
+
+    const { mode, payment_status } = stripeData as Stripe.Checkout.Session;
+
+    if (isSubscription) {
+      console.info(`Starting subscription sync for customer: ${customerId}`);
+      await syncCustomerFromStripe(customerId);
+    } else if (mode === 'payment' && payment_status === 'paid') {
+      try {
+        // Extract the necessary information from the session
+        const {
+          id: checkout_session_id,
+          payment_intent,
+          amount_subtotal,
+          amount_total,
+          currency,
+        } = stripeData as Stripe.Checkout.Session;
+
+        // Insert the order into the stripe_orders table
+        const { error: orderError } = await supabase.from('stripe_orders').insert({
+          checkout_session_id,
+          payment_intent_id: payment_intent,
+          customer_id: customerId,
+          amount_subtotal,
+          amount_total,
+          currency,
+          payment_status,
+          status: 'completed', // assuming we want to mark it as completed since payment is successful
+        });
+
+        if (orderError) {
+          console.error('Error inserting order:', orderError);
+          return;
+        }
+        console.info(`Successfully processed one-time payment for session: ${checkout_session_id}`);
+      } catch (error) {
+        console.error('Error processing one-time payment:', error);
+      }
+    }
   }
 }
 
-// --- Abonnement Bouclier ---------------------------------------------------
-async function fulfillSubscription(session: Stripe.Checkout.Session): Promise<void> {
-  const db = serviceClient();
-  const email = (session.customer_email ?? session.customer_details?.email ?? '').toLowerCase();
+// based on the excellent https://github.com/t3dotgg/stripe-recommendations
+async function syncCustomerFromStripe(customerId: string) {
+  try {
+    // fetch latest subscription data from Stripe
+    const subscriptions = await stripe.subscriptions.list({
+      customer: customerId,
+      limit: 1,
+      status: 'all',
+      expand: ['data.default_payment_method'],
+    });
 
-  if (session.id) {
-    await db
-      .from('orders')
-      .update({ status: 'paid', paid_at: new Date().toISOString() })
-      .eq('stripe_session_id', session.id);
-  }
+    // TODO verify if needed
+    if (subscriptions.data.length === 0) {
+      console.info(`No active subscriptions found for customer: ${customerId}`);
+      const { error: noSubError } = await supabase.from('stripe_subscriptions').upsert(
+        {
+          customer_id: customerId,
+          subscription_status: 'not_started',
+        },
+        {
+          onConflict: 'customer_id',
+        },
+      );
 
-  const subId = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
-  const custId = typeof session.customer === 'string' ? session.customer : session.customer?.id;
-  if (subId) {
-    await db.from('subscriptions').upsert(
-      { email, stripe_subscription_id: subId, stripe_customer_id: custId ?? null, status: 'active' },
-      { onConflict: 'stripe_subscription_id' }
+      if (noSubError) {
+        console.error('Error updating subscription status:', noSubError);
+        throw new Error('Failed to update subscription status in database');
+      }
+    }
+
+    // assumes that a customer can only have a single subscription
+    const subscription = subscriptions.data[0];
+
+    // store subscription state
+    const { error: subError } = await supabase.from('stripe_subscriptions').upsert(
+      {
+        customer_id: customerId,
+        subscription_id: subscription.id,
+        price_id: subscription.items.data[0].price.id,
+        current_period_start: subscription.current_period_start,
+        current_period_end: subscription.current_period_end,
+        cancel_at_period_end: subscription.cancel_at_period_end,
+        ...(subscription.default_payment_method && typeof subscription.default_payment_method !== 'string'
+          ? {
+              payment_method_brand: subscription.default_payment_method.card?.brand ?? null,
+              payment_method_last4: subscription.default_payment_method.card?.last4 ?? null,
+            }
+          : {}),
+        status: subscription.status,
+      },
+      {
+        onConflict: 'customer_id',
+      },
     );
-  }
 
-  if (email) {
-    const { data: lead } = await db.from('leads').select('id').eq('email', email).maybeSingle();
-    if (lead) await db.from('leads').update({ statut: 'client' }).eq('id', lead.id);
+    if (subError) {
+      console.error('Error syncing subscription:', subError);
+      throw new Error('Failed to sync subscription in database');
+    }
+    console.info(`Successfully synced subscription for customer: ${customerId}`);
+  } catch (error) {
+    console.error(`Failed to sync subscription for customer ${customerId}:`, error);
+    throw error;
   }
-}
-
-async function updateSubscriptionStatus(sub: Stripe.Subscription): Promise<void> {
-  const db = serviceClient();
-  await db
-    .from('subscriptions')
-    .update({
-      status: sub.status,
-      current_period_end: sub.current_period_end
-        ? new Date(sub.current_period_end * 1000).toISOString()
-        : null,
-    })
-    .eq('stripe_subscription_id', sub.id);
 }
