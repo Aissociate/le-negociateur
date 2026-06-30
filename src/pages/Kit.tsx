@@ -131,11 +131,15 @@ export default function Kit() {
     const tick = () => {
       const now = new Date();
       const next = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1);
-      const mins = Math.max(0, Math.floor((next - now.getTime()) / 60000));
-      setResetIn(`${Math.floor(mins / 60)}h ${String(mins % 60).padStart(2, '0')}m`);
+      const total = Math.max(0, Math.floor((next - now.getTime()) / 1000));
+      const h = Math.floor(total / 3600);
+      const m = Math.floor((total % 3600) / 60);
+      const s = total % 60;
+      const pad = (n: number) => String(n).padStart(2, '0');
+      setResetIn(`${pad(h)}h ${pad(m)}m ${pad(s)}s`);
     };
     tick();
-    const iv = window.setInterval(tick, 60000);
+    const iv = window.setInterval(tick, 1000);
     return () => window.clearInterval(iv);
   }, []);
 
@@ -221,7 +225,7 @@ export default function Kit() {
 
       {/* Tarif de lancement — quota quotidien réel (raison : capacité de génération/jour) */}
       {launch && launch.remaining > 0 && (
-        <div className="mt-6 mx-auto max-w-xl rounded-xl border border-ember/30 bg-ember/[0.06] px-4 py-3 text-center">
+        <div className="mt-6 mx-auto max-w-xl rounded-xl border border-ember/30 bg-ember/[0.06] px-4 py-4 text-center">
           <p className="text-sm text-paper/85 flex items-center justify-center gap-2">
             <Flame className="w-4 h-4 text-ember shrink-0" />
             <span>
@@ -230,8 +234,12 @@ export default function Kit() {
               aujourd'hui
             </span>
           </p>
-          <p className="mt-1 text-xs text-paper/45">
-            Volume quotidien limité (génération + vérification en temps réel) · réinitialisation dans {resetIn}
+          <div className="mt-3">
+            <p className="text-[11px] uppercase tracking-widest text-paper/45">Réinitialisation dans</p>
+            <p className="font-display text-3xl sm:text-4xl font-bold text-ember tabular-nums mt-0.5">{resetIn}</p>
+          </div>
+          <p className="mt-2 text-xs text-paper/40">
+            Volume quotidien limité — génération + vérification en temps réel.
           </p>
         </div>
       )}
