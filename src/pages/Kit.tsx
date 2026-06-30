@@ -241,7 +241,7 @@ export default function Kit() {
         <div className="mt-8 text-center rounded-2xl border border-gold/30 bg-gold/[0.07] p-6">
           <p className="text-xs uppercase tracking-widest text-paper/50">Ton écart estimé</p>
           <p className="font-display text-3xl sm:text-4xl font-bold text-gold mt-1">
-            +{euros(gapAnnual)} <span className="text-base text-paper/50 font-normal">/ an</span>
+            +{gapAnnual.toLocaleString('fr-FR')} € <span className="text-base text-paper/50 font-normal">/ an</span>
           </p>
           <p className="text-sm text-paper/80 mt-3 max-w-xl mx-auto">
             Le Kit, c'est <strong className="text-paper">{euros(kit.price_cents)}</strong> une seule fois — soit{' '}
