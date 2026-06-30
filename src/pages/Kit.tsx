@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Check, ShieldCheck, Loader2, ArrowRight, AlertTriangle, Quote, Lock, Star, RefreshCw, Target, MessageSquareText } from 'lucide-react';
 import Layout from '../components/Layout';
-import { supabase, callFunction } from '../lib/supabase';
+import { supabase, callFunction, getFunction } from '../lib/supabase';
 import { Product } from '../types';
 import { TESTIMONIALS } from '../lib/testimonials';
 import { SOCIAL_PROOF, SOCIAL_PROOF_MIN_COUNT } from '../lib/cro';
@@ -99,6 +100,17 @@ export default function Kit() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showBar, setShowBar] = useState(false);
+  const [searchParams] = useSearchParams();
+  const [gapAnnual, setGapAnnual] = useState(0);
+
+  // Ancrage personnalisé : on récupère l'écart du visiteur via son rapport (?report=).
+  useEffect(() => {
+    const reportId = searchParams.get('report');
+    if (!reportId) return;
+    getFunction<{ gap_annual?: number }>('public-data', { report: reportId })
+      .then((r) => setGapAnnual(Math.max(0, Number(r?.gap_annual ?? 0))))
+      .catch(() => {});
+  }, [searchParams]);
 
   useEffect(() => {
     supabase
@@ -161,6 +173,23 @@ export default function Kit() {
       <div className="mt-6">
         <StatLine />
       </div>
+
+      {/* Ancrage personnalisé prix / gain (si le visiteur vient de son rapport) */}
+      {gapAnnual > 0 && kit && (
+        <div className="mt-8 text-center rounded-2xl border border-gold/30 bg-gold/[0.07] p-6">
+          <p className="text-xs uppercase tracking-widest text-paper/50">Ton écart estimé</p>
+          <p className="font-display text-3xl sm:text-4xl font-bold text-gold mt-1">
+            +{euros(gapAnnual)} <span className="text-base text-paper/50 font-normal">/ an</span>
+          </p>
+          <p className="text-sm text-paper/80 mt-3 max-w-xl mx-auto">
+            Le Kit, c'est <strong className="text-paper">{euros(kit.price_cents)}</strong> une seule fois — soit{' '}
+            <strong className="text-gold">
+              {(Math.round((kit.price_cents / 100 / gapAnnual) * 1000) / 10).toLocaleString('fr-FR')} %
+            </strong>{' '}
+            de ce que tu laisses sur la table chaque année. Le premier entretien le rembourse ; le reste, tu l'encaisses.
+          </p>
+        </div>
+      )}
 
       {/* 2. Coût de l'inaction — urgence honnête */}
       <div className="mt-10 rounded-2xl border border-ember/30 bg-ember/[0.06] p-6">

@@ -81,7 +81,7 @@ Deno.serve(async (_req) => {
       market_high: num(report?.market_high),
       step: nextStep,
       theme: template.subject,
-      kit_url: `${siteUrl}/kit`,
+      kit_url: lead.last_report_id ? `${siteUrl}/kit?report=${lead.last_report_id}` : `${siteUrl}/kit`,
       report_url: lead.last_report_id ? `${siteUrl}/rapport/${lead.last_report_id}` : `${siteUrl}/`,
     };
 
