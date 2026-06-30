@@ -9,6 +9,10 @@
 create extension if not exists pg_cron;
 create extension if not exists pg_net;
 
+-- Ré-exécutable : on retire d'abord les jobs existants (évite les doublons).
+select cron.unschedule(jobname) from cron.job
+ where jobname in ('send-emails-tick','orchestrator-tick','update-benchmarks-weekly','prospect-outreach-tick');
+
 -- 1. Séquence d'emails : toutes les 15 minutes
 select cron.schedule(
   'send-emails-tick',

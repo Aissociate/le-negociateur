@@ -1,6 +1,8 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import Stripe from 'npm:stripe@17.7.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
+import { baseKitVars } from '../_shared/kit.ts';
+import { callLLM } from '../_shared/llm.ts';
 
 const stripeSecret = Deno.env.get('STRIPE_SECRET_KEY')!;
 const stripeWebhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET')!;
@@ -58,6 +60,13 @@ async function handleEvent(event: Stripe.Event) {
 
   if (!stripeData) {
     return;
+  }
+
+  // Fulfillment du tunnel maison : marque la commande `orders` payée, mémorise le
+  // client Stripe (requis pour les OTO 1-clic), génère le Kit baseline et stoppe le
+  // nurturing. Indépendant de la synchro `stripe_orders`/`stripe_subscriptions` ci-dessous.
+  if (event.type === 'checkout.session.completed') {
+    await fulfillFunnelOrder(stripeData as Stripe.Checkout.Session);
   }
 
   if (!('customer' in stripeData)) {
@@ -121,6 +130,84 @@ async function handleEvent(event: Stripe.Event) {
         console.error('Error processing one-time payment:', error);
       }
     }
+  }
+}
+
+// Fulfillment de la commande du tunnel (table `orders`) suite à un Checkout payé.
+// Idempotent : ré-appelable sans double-effet (Stripe peut rejouer l'événement).
+async function fulfillFunnelOrder(session: Stripe.Checkout.Session) {
+  const sessionId = session.id;
+  const customerId =
+    typeof session.customer === 'string' ? session.customer : session.customer?.id ?? null;
+
+  const { data: order } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('stripe_session_id', sessionId)
+    .maybeSingle();
+  if (!order) {
+    console.info(`Aucune commande funnel pour la session ${sessionId}`);
+    return;
+  }
+
+  // Paiement effectif requis (les modes 'payment' async pourraient être 'unpaid').
+  if (session.payment_status && session.payment_status === 'unpaid') {
+    console.info(`Session ${sessionId} encore impayée, fulfillment différé`);
+    return;
+  }
+
+  // 1. Marque payée + mémorise le client Stripe (sans écraser une commande déjà traitée).
+  if (order.status !== 'paid') {
+    await supabase
+      .from('orders')
+      .update({ status: 'paid', paid_at: new Date().toISOString(), stripe_customer_id: customerId })
+      .eq('id', order.id);
+  } else if (customerId && !order.stripe_customer_id) {
+    await supabase.from('orders').update({ stripe_customer_id: customerId }).eq('id', order.id);
+  }
+
+  // 2. Lead + rapport associés (par lead_id, sinon par email).
+  const { data: lead } = order.lead_id
+    ? await supabase.from('leads').select('*').eq('id', order.lead_id).maybeSingle()
+    : await supabase.from('leads').select('*').eq('email', order.email).maybeSingle();
+  const { data: report } = lead?.last_report_id
+    ? await supabase.from('gap_reports').select('*').eq('id', lead.last_report_id).maybeSingle()
+    : { data: null };
+
+  // 3. Ce lead devient client : on stoppe la séquence de relances.
+  if (lead && lead.statut !== 'client') {
+    await supabase.from('leads').update({ statut: 'client', next_email_at: null }).eq('id', lead.id);
+  }
+
+  // 4. Kit baseline si la commande contient le Kit (le profil détaillé l'enrichira
+  //    ensuite via personalize-kit). Idempotent : un seul livrable par commande.
+  const slugs: string[] = order.product_slugs ?? [];
+  const { data: products } = await supabase.from('products').select('slug, kind').in('slug', slugs);
+  const hasKit = (products ?? []).some((p) => p.slug === 'kit' || p.kind === 'kit');
+  if (!hasKit) return;
+
+  const { data: existing } = await supabase
+    .from('deliverables')
+    .select('id')
+    .eq('order_id', order.id)
+    .maybeSingle();
+  if (existing) return;
+
+  try {
+    const { text } = await callLLM(supabase, 'kit_offensif', baseKitVars(report, lead));
+    const token = crypto.randomUUID().replaceAll('-', '') + crypto.randomUUID().replaceAll('-', '');
+    await supabase.from('deliverables').insert({
+      order_id: order.id,
+      lead_id: lead?.id ?? null,
+      type: 'kit_offensif',
+      content_md: text,
+      access_token: token,
+    });
+    console.info(`Kit baseline généré pour la commande ${order.id}`);
+  } catch (err) {
+    // La commande reste payée : on ne perd pas la vente. Le Kit pourra être régénéré
+    // (personalize-kit) ou rejoué via un nouvel événement.
+    console.error('Génération du Kit baseline échouée (commande payée) :', err);
   }
 }
 
