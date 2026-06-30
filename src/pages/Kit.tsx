@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Check, ShieldCheck, Loader2, ArrowRight, AlertTriangle, Quote, Lock, Star, RefreshCw, Target, MessageSquareText } from 'lucide-react';
 import Layout from '../components/Layout';
+import SocialProofToaster from '../components/SocialProofToaster';
 import { supabase, callFunction, getFunction } from '../lib/supabase';
 import { Product } from '../types';
 import { TESTIMONIALS } from '../lib/testimonials';
@@ -15,24 +16,30 @@ const KIT_INCLUDED = [
   {
     t: 'Ton argumentaire chiffré, ultra-personnalisé',
     d: 'Le montant exact à demander, calculé pour TON poste, TON marché, TES chiffres — sources publiques à l’appui. Aucun modèle recyclé : ton cas, et lui seul.',
+    v: 89,
   },
   {
     t: 'La stratégie de négociation en 5 étapes',
     d: 'De la prise de rendez-vous à la signature : quoi dire, quand le dire, et dans quel ordre pour garder la main.',
+    v: 49,
   },
   {
     t: 'Tes scripts mot à mot',
     d: 'La demande, l’annonce du chiffre, le silence qui fait céder, la conclusion. À lire tel quel, même si tu détestes négocier.',
+    v: 49,
   },
   {
     t: 'Les réponses aux 12 objections les plus fréquentes',
     d: '« Ce n’est pas le moment », « le budget est gelé », « ça ne dépend pas de moi »… toutes désamorcées d’avance.',
+    v: 39,
   },
   {
     t: 'Ton plan B hors salaire + l’email de verrouillage',
     d: 'Télétravail, jours de congés, prime, formation financée… et l’email qui grave l’accord noir sur blanc après l’entretien.',
+    v: 39,
   },
 ];
+const KIT_TOTAL_VALUE = KIT_INCLUDED.reduce((s, f) => s + f.v, 0);
 
 const PILIERS = [
   {
@@ -112,6 +119,20 @@ export default function Kit() {
       .catch(() => {});
   }, [searchParams]);
 
+  // Exit-intent (desktop) : à la sortie, on propose le downsell (Argumentaire Éclair).
+  const [showExit, setShowExit] = useState(false);
+  const exitShown = useRef(false);
+  useEffect(() => {
+    const onLeave = (e: MouseEvent) => {
+      if (e.clientY <= 0 && !exitShown.current && !loading) {
+        exitShown.current = true;
+        setShowExit(true);
+      }
+    };
+    document.addEventListener('mouseleave', onLeave);
+    return () => document.removeEventListener('mouseleave', onLeave);
+  }, [loading]);
+
   useEffect(() => {
     supabase
       .from('products')
@@ -136,6 +157,7 @@ export default function Kit() {
   const p = (slug: string) => products.find((x) => x.slug === slug);
   const kit = p('kit');
   const simu = p('simulateur');
+  const eclair = p('argumentaire-eclair');
 
   async function checkout(slugs: string[]) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -265,15 +287,26 @@ export default function Kit() {
           </div>
           <ul className="mt-5 space-y-3">
             {KIT_INCLUDED.map((f) => (
-              <li key={f.t} className="flex gap-3">
+              <li key={f.t} className="flex gap-3 items-start">
                 <Check className="w-5 h-5 text-gold shrink-0 mt-0.5" />
-                <span>
+                <span className="flex-1">
                   <span className="font-semibold text-sm">{f.t}</span>
                   <span className="block text-sm text-ink/60">{f.d}</span>
                 </span>
+                <span className="text-xs text-ink/40 whitespace-nowrap shrink-0 mt-0.5">{f.v} €</span>
               </li>
             ))}
           </ul>
+
+          {/* Value stack : valeur totale barrée vs prix réel */}
+          <div className="mt-5 flex items-center justify-between border-t border-ink/10 pt-4">
+            <span className="text-sm text-ink/60">Valeur totale</span>
+            <span className="text-ink/40 line-through">{KIT_TOTAL_VALUE.toLocaleString('fr-FR')} €</span>
+          </div>
+          <div className="mt-1 flex items-baseline justify-between">
+            <span className="font-bold">Ton prix aujourd'hui</span>
+            <span className="font-display text-2xl font-bold text-ink">{kit ? euros(kit.price_cents) : '—'}</span>
+          </div>
 
           {simu && (
             <label className="flex items-start gap-3 mt-6 rounded-xl border-2 border-dashed border-gold/60 bg-gold/5 p-4 cursor-pointer">
@@ -377,6 +410,60 @@ export default function Kit() {
           Paiement sécurisé Stripe · Satisfait ou remboursé 30 jours · Généré à partir de ton analyse.
         </p>
       </section>
+
+      {/* Exit-intent : downsell Argumentaire Éclair (récupère les partants) */}
+      {showExit && eclair && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onClick={() => setShowExit(false)}
+        >
+          <div className="bg-paper text-ink rounded-2xl max-w-md w-full p-6 relative" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setShowExit(false)}
+              className="absolute right-4 top-3 text-ink/40 hover:text-ink text-2xl leading-none"
+            >
+              ×
+            </button>
+            <p className="text-gold text-xs font-bold uppercase tracking-widest">Avant de partir…</p>
+            <h3 className="font-display text-xl font-bold mt-1">Pas encore prêt pour le Kit complet ?</h3>
+            <p className="text-sm text-ink/70 mt-2">
+              Commence par l'essentiel : <strong>{eclair.name}</strong> — ton argument chiffré + le script clé pour ouvrir
+              la discussion, à un prix mini.
+            </p>
+            <div className="mt-4 flex items-baseline justify-between">
+              <span className="font-semibold">{eclair.name}</span>
+              <span className="font-display text-2xl font-bold">{euros(eclair.price_cents)}</span>
+            </div>
+            {!email && (
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Ton email (celui de ton analyse)"
+                className="mt-3 w-full rounded-lg bg-ink/5 border border-ink/15 px-3 py-2 text-sm focus:border-gold focus:outline-none"
+              />
+            )}
+            {error && <p className="text-ember text-sm font-semibold mt-2">{error}</p>}
+            <button
+              onClick={() => checkout(['argumentaire-eclair'])}
+              disabled={loading}
+              className="mt-4 w-full bg-ink text-paper font-bold py-3 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2 hover:bg-ink/90 transition"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
+              Oui, je prends l'Argumentaire Éclair — {euros(eclair.price_cents)}
+            </button>
+            <button
+              onClick={() => setShowExit(false)}
+              className="mt-2 w-full text-sm text-ink/50 hover:text-ink"
+            >
+              Non merci, je continue
+            </button>
+            <p className="mt-3 text-center text-[11px] text-ink/40">Satisfait ou remboursé 30 jours.</p>
+          </div>
+        </div>
+      )}
+
+      <SocialProofToaster />
 
       {/* Barre CTA collante */}
       <div
