@@ -100,6 +100,13 @@ Deno.serve(async (_req) => {
       /* repli template statique */
     }
 
+    // Pied de page de désinscription (conformité RGPD/CNIL) sur toutes les relances.
+    const unsubUrl = `${siteUrl}/desinscription?token=${lead.unsubscribe_token ?? ''}`;
+    html +=
+      `<p style="font-size:12px;color:#888;margin-top:24px">` +
+      `Tu reçois cet email car tu as demandé ton analyse de positionnement salarial. ` +
+      `<a href="${unsubUrl}">Se désinscrire en un clic</a>.</p>`;
+
     try {
       await sendEmail(lead.email, subject, html);
       await db.from('email_events').insert({ lead_id: lead.id, step: nextStep, status: 'sent' });
