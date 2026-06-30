@@ -3,6 +3,7 @@ import Stripe from 'npm:stripe@17.7.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
 import { baseKitVars } from '../_shared/kit.ts';
 import { callLLM } from '../_shared/llm.ts';
+import { sendEmail } from '../_shared/email.ts';
 
 const stripeSecret = Deno.env.get('STRIPE_SECRET_KEY')!;
 const stripeWebhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET')!;
@@ -204,6 +205,34 @@ async function fulfillFunnelOrder(session: Stripe.Checkout.Session) {
       access_token: token,
     });
     console.info(`Kit baseline généré pour la commande ${order.id}`);
+
+    // Email de livraison : lien du Kit (+ accès entraînement IA si l'upsell a été pris).
+    try {
+      const siteUrl = Deno.env.get('SITE_URL') ?? 'http://localhost:5173';
+      const kitUrl = `${siteUrl}/kit/document/${token}`;
+      const hasSimulateur = (products ?? []).some((p) => p.slug === 'simulateur');
+      const trainingBlock = hasSimulateur
+        ? `<p>Tu as aussi débloqué l'<strong>entraînement IA à la négociation</strong> : <a href="${siteUrl}/simulateur">démarrer une session</a>.</p>`
+        : '';
+      await sendEmail(
+        order.email,
+        'Ton Kit de Négociation est prêt 🎯',
+        `<div style="font-family:system-ui,sans-serif;font-size:15px;line-height:1.6;color:#1a1a1a">
+          <p>Bonjour,</p>
+          <p>Merci pour ta confiance — ton <strong>Kit de Négociation personnalisé</strong> est prêt.</p>
+          <p style="margin:24px 0">
+            <a href="${kitUrl}" style="background:#c8a24a;color:#1a1a1a;font-weight:bold;padding:12px 22px;border-radius:8px;text-decoration:none">Accéder à mon Kit</a>
+          </p>
+          ${trainingBlock}
+          <p>Tu peux retrouver tes accès à tout moment depuis ton <a href="${siteUrl}/compte">espace personnel</a>.</p>
+          <p>À ta réussite,<br/>L'équipe Le Négociateur</p>
+        </div>`
+      );
+      console.info(`Email de livraison envoyé pour la commande ${order.id}`);
+    } catch (mailErr) {
+      // Le Kit existe et reste accessible (page Merci / espace client) : on ne bloque pas.
+      console.error('Envoi email de livraison échoué (Kit créé) :', mailErr);
+    }
   } catch (err) {
     // La commande reste payée : on ne perd pas la vente. Le Kit pourra être régénéré
     // (personalize-kit) ou rejoué via un nouvel événement.
