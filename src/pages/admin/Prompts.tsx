@@ -1,6 +1,15 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import { supabase, callAdminFunction } from '../../lib/supabase';
 import type { AgentConfig } from '../../types';
+
+interface TestResult {
+  ok: boolean;
+  text?: string;
+  error?: string;
+  model?: string;
+  tokens_out?: number;
+  ms?: number;
+}
 
 /**
  * Gestion des IA : pour chaque agent, modèle LLM (slug OpenRouter), prompts,
@@ -9,6 +18,19 @@ import type { AgentConfig } from '../../types';
 export default function Prompts() {
   const [configs, setConfigs] = useState<AgentConfig[]>([]);
   const [saved, setSaved] = useState('');
+  const [testing, setTesting] = useState<string | null>(null);
+  const [results, setResults] = useState<Record<string, TestResult>>({});
+
+  async function test(config: AgentConfig) {
+    setTesting(config.id);
+    try {
+      const r = await callAdminFunction<TestResult>('agent-test', { agent: config.agent });
+      setResults((m) => ({ ...m, [config.id]: r }));
+    } catch (e) {
+      setResults((m) => ({ ...m, [config.id]: { ok: false, error: e instanceof Error ? e.message : 'Erreur' } }));
+    }
+    setTesting(null);
+  }
 
   useEffect(() => {
     supabase.from('agent_config').select('*').order('agent').then(({ data }) => setConfigs((data as AgentConfig[]) ?? []));
@@ -105,9 +127,39 @@ export default function Prompts() {
                 className="w-full rounded-lg bg-ink border border-paper/20 px-3 py-2 text-sm font-mono"
               />
             </div>
-            <button onClick={() => save(c)} className="bg-gold text-ink font-bold px-5 py-2 rounded-lg text-sm">
-              Enregistrer
-            </button>
+            <div className="flex items-center gap-3">
+              <button onClick={() => save(c)} className="bg-gold text-ink font-bold px-5 py-2 rounded-lg text-sm">
+                Enregistrer
+              </button>
+              <button
+                onClick={() => test(c)}
+                disabled={testing === c.id}
+                className="border border-gold/50 text-gold px-5 py-2 rounded-lg text-sm disabled:opacity-50"
+                title="Lance un vrai appel LLM avec des valeurs d'exemple"
+              >
+                {testing === c.id ? 'Test en cours…' : 'Tester'}
+              </button>
+            </div>
+            {results[c.id] && (
+              <div
+                className={`rounded-lg p-3 text-sm ${
+                  results[c.id].ok ? 'bg-paper/5 border border-paper/10' : 'bg-ember/10 border border-ember/40'
+                }`}
+              >
+                {results[c.id].ok ? (
+                  <>
+                    <p className="text-xs text-paper/50 mb-2">
+                      ✅ {results[c.id].model} · {results[c.id].tokens_out} tokens · {results[c.id].ms} ms
+                    </p>
+                    <pre className="whitespace-pre-wrap break-words font-sans text-paper/80 max-h-72 overflow-auto">
+                      {results[c.id].text}
+                    </pre>
+                  </>
+                ) : (
+                  <p className="text-ember">❌ {results[c.id].error}</p>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>
