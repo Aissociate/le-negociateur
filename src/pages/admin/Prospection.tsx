@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ShieldAlert, RefreshCw, Sparkles, Download, Upload, Mail, Send } from 'lucide-react';
 import { supabase, callAdminFunction } from '../../lib/supabase';
+import { parseCSV, guessMapping } from '../../lib/csv';
 import type { Prospect, ProspectList } from '../../types';
 
 const STAGE_COLORS: Record<string, string> = {
@@ -41,44 +42,6 @@ const SYNONYMS: Record<string, string[]> = {
   localisation: ['localisation', 'location', 'ville', 'city', 'pays', 'country', 'région', 'region'],
   seniority: ['seniority', 'séniorité', 'seniorité', 'niveau', 'level'],
 };
-
-function detectDelimiter(line: string): string {
-  const ranked = [',', ';', '\t']
-    .map((d) => [d, line.split(d).length] as const)
-    .sort((a, b) => b[1] - a[1]);
-  return ranked[0][1] > 1 ? ranked[0][0] : ',';
-}
-
-// Parseur CSV minimal mais robuste (champs entre guillemets, "" échappés, CRLF).
-function parseCSV(text: string): string[][] {
-  const nl = text.indexOf('\n');
-  const delim = detectDelimiter(text.slice(0, nl >= 0 ? nl : text.length));
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let field = '';
-  let inQuotes = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (inQuotes) {
-      if (c === '"') {
-        if (text[i + 1] === '"') { field += '"'; i++; }
-        else inQuotes = false;
-      } else field += c;
-    } else if (c === '"') {
-      inQuotes = true;
-    } else if (c === delim) {
-      row.push(field); field = '';
-    } else if (c === '\r') {
-      /* ignore */
-    } else if (c === '\n') {
-      row.push(field); rows.push(row); row = []; field = '';
-    } else {
-      field += c;
-    }
-  }
-  if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
-  return rows.filter((r) => r.some((c) => c.trim() !== ''));
-}
 
 export default function Prospection() {
   const [lists, setLists] = useState<ProspectList[]>([]);
@@ -201,12 +164,7 @@ export default function Prospection() {
       const hdr = all[0];
       setHeaders(hdr);
       setDataRows(all.slice(1));
-      const guess: Record<string, number> = {};
-      FIELDS.forEach((f) => {
-        const syn = SYNONYMS[f.key] ?? [f.key];
-        guess[f.key] = hdr.findIndex((h) => syn.includes(h.trim().toLowerCase()));
-      });
-      setMapping(guess);
+      setMapping(guessMapping(hdr, SYNONYMS));
     };
     reader.readAsText(file);
   }

@@ -1,8 +1,26 @@
 import { useCallback, useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import { Upload } from 'lucide-react';
+import { supabase, callAdminFunction } from '../../lib/supabase';
+import { parseCSV, guessMapping } from '../../lib/csv';
 import type { BenchmarkUpdate, SalaryBenchmark } from '../../types';
 
 const eur = (n: number) => n.toLocaleString('fr-FR');
+
+// Import de barèmes : 1 ligne = 1 métier + sa médiane de base (IDF/Confirmé).
+const BFIELDS: { key: string; label: string }[] = [
+  { key: 'intitule', label: 'Intitulé du métier' },
+  { key: 'base_median', label: 'Médiane de base €/an (IDF, Confirmé)' },
+  { key: 'code_rome', label: 'Code ROME' },
+  { key: 'tension_score', label: 'Tension (0-100)' },
+  { key: 'secteur', label: 'Secteur' },
+];
+const BSYN: Record<string, string[]> = {
+  intitule: ['intitulé', 'intitule', 'métier', 'metier', 'poste', 'fonction', 'job', 'title'],
+  base_median: ['médiane', 'mediane', 'median', 'salaire', 'salaire médian', 'base', 'médiane de base', 'salary'],
+  code_rome: ['rome', 'code rome', 'code_rome'],
+  tension_score: ['tension', 'tension_score', 'score tension'],
+  secteur: ['secteur', 'sector', 'branche'],
+};
 
 /**
  * Base de salaires : consultation/édition du référentiel (+ tension) et validation
@@ -13,6 +31,14 @@ export default function Benchmarks() {
   const [pending, setPending] = useState<BenchmarkUpdate[]>([]);
   const [filter, setFilter] = useState('');
   const [tensionOnly, setTensionOnly] = useState(false);
+
+  // Import CSV de barèmes
+  const [msg, setMsg] = useState('');
+  const [csvName, setCsvName] = useState('');
+  const [headers, setHeaders] = useState<string[]>([]);
+  const [dataRows, setDataRows] = useState<string[][]>([]);
+  const [mapping, setMapping] = useState<Record<string, number>>({});
+  const [importing, setImporting] = useState(false);
 
   const load = useCallback(async () => {
     const [bm, up] = await Promise.all([
@@ -68,6 +94,55 @@ export default function Benchmarks() {
     load();
   }
 
+  function onBenchFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCsvName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const all = parseCSV(String(reader.result ?? ''));
+      if (all.length < 2) {
+        setMsg('CSV vide ou sans données.');
+        return;
+      }
+      setHeaders(all[0]);
+      setDataRows(all.slice(1));
+      setMapping(guessMapping(all[0], BSYN));
+    };
+    reader.readAsText(file);
+  }
+
+  async function importBenchmarks() {
+    if (!dataRows.length) return;
+    setImporting(true);
+    try {
+      const payload = dataRows.map((r) => {
+        const o: Record<string, string> = {};
+        BFIELDS.forEach((f) => {
+          const idx = mapping[f.key];
+          if (idx != null && idx >= 0 && r[idx]?.trim()) o[f.key] = r[idx].trim();
+        });
+        return o;
+      });
+      const res = await callAdminFunction<{ jobs: number; inserted: number; skipped: number }>(
+        'benchmark-import-csv',
+        { rows: payload }
+      );
+      setMsg(
+        `${res.jobs} métier(s) importés → ${res.inserted} lignes générées (4 séniorités × 3 régions)` +
+          (res.skipped ? `, ${res.skipped} ligne(s) ignorée(s).` : '.')
+      );
+      setHeaders([]);
+      setDataRows([]);
+      setCsvName('');
+      setMapping({});
+      load();
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : 'Erreur import barèmes.');
+    }
+    setImporting(false);
+  }
+
   const filtered = rows.filter((r) => {
     if (tensionOnly && !r.metier_en_tension) return false;
     return `${r.intitule} ${r.secteur} ${r.seniorite} ${r.localisation} ${r.code_rome ?? ''}`
@@ -82,6 +157,57 @@ export default function Benchmarks() {
         Référentiel utilisé pour toutes les analyses (sources publiques INSEE / DARES / APEC). L'agent de curation
         dépose ses propositions ci-dessous — rien n'est appliqué sans validation humaine.
       </p>
+
+      {msg && <p className="mb-4 text-gold font-semibold text-sm">{msg}</p>}
+
+      {/* Import de barèmes en masse (CSV) */}
+      <div className="bg-paper/5 rounded-xl p-6 mb-10 max-w-3xl">
+        <h2 className="font-display text-xl font-bold mb-1">Étoffer le référentiel (import CSV)</h2>
+        <p className="text-xs text-paper/50 mb-4">
+          1 ligne = 1 métier + sa <strong>médiane de base</strong> (€/an, référence Île-de-France / Confirmé, ex.
+          barème APEC). Le système génère automatiquement les <strong>12 combos</strong> (4 séniorités × 3 régions) avec
+          les fourchettes. Réimporter un même intitulé écrase ses lignes.
+        </p>
+        <input type="file" accept=".csv,text/csv" onChange={onBenchFile} className="text-sm text-paper/70" />
+
+        {headers.length > 0 && (
+          <div className="mt-5">
+            <p className="text-xs text-paper/50 mb-2 uppercase tracking-wide">Associe tes colonnes</p>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {BFIELDS.map((f) => (
+                <div key={f.key}>
+                  <label className="block text-xs text-paper/50 mb-1">
+                    {f.label}
+                    {(f.key === 'intitule' || f.key === 'base_median') && <span className="text-gold"> *</span>}
+                  </label>
+                  <select
+                    value={mapping[f.key] ?? -1}
+                    onChange={(e) => setMapping((m) => ({ ...m, [f.key]: Number(e.target.value) }))}
+                    className="w-full rounded-lg bg-ink border border-paper/20 px-3 py-2 text-sm"
+                  >
+                    <option value={-1}>— ignorer —</option>
+                    {headers.map((h, i) => (
+                      <option key={i} value={i}>
+                        {h || `Colonne ${i + 1}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-paper/40 mt-3">
+              {dataRows.length} métier(s) dans « {csvName} » → {dataRows.length * 12} lignes générées.
+            </p>
+            <button
+              onClick={importBenchmarks}
+              disabled={importing}
+              className="mt-4 bg-gold text-ink font-bold px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 disabled:opacity-50"
+            >
+              <Upload className="w-4 h-4" /> Importer {dataRows.length} métier(s)
+            </button>
+          </div>
+        )}
+      </div>
 
       {pending.length > 0 && (
         <div className="mb-10 bg-ember/10 border border-ember rounded-xl p-6">
