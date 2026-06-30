@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 
 const NAV = [
   { to: '/admin', label: 'Tableau de bord', end: true },
+  { to: '/admin/funnel', label: 'Funnel & KPI' },
   { to: '/admin/leads', label: 'Leads (CRM)' },
   { to: '/admin/prospection', label: 'Prospection' },
   { to: '/admin/benchmarks', label: 'Base salaires' },

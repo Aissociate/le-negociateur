@@ -54,6 +54,9 @@ Deno.serve(async (req) => {
       mode: isSubscription ? 'subscription' : 'payment',
       customer_email: email,
       line_items: lineItems,
+      // Affiche le champ « Ajouter un code promo » sur le checkout hébergé.
+      // Les codes (ex. cadeau -99 %) se créent/révoquent côté Stripe.
+      allow_promotion_codes: true,
       // One-shots : on crée un client et on mémorise la carte pour les OTO 1-clic.
       ...(isSubscription
         ? {}

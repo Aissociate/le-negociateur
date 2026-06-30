@@ -19,6 +19,7 @@ const Legal = lazy(() => import('./pages/Legal'));
 const AdminLogin = lazy(() => import('./pages/admin/AdminLogin'));
 const AdminLayout = lazy(() => import('./pages/admin/AdminLayout'));
 const Dashboard = lazy(() => import('./pages/admin/Dashboard'));
+const Funnel = lazy(() => import('./pages/admin/Funnel'));
 const Leads = lazy(() => import('./pages/admin/Leads'));
 const Orders = lazy(() => import('./pages/admin/Orders'));
 const Emails = lazy(() => import('./pages/admin/Emails'));
@@ -68,6 +69,7 @@ export default function App() {
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<Dashboard />} />
+          <Route path="funnel" element={<Funnel />} />
           <Route path="leads" element={<Leads />} />
           <Route path="prospection" element={<Prospection />} />
           <Route path="benchmarks" element={<Benchmarks />} />
