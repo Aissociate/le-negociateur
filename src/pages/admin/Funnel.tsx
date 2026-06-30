@@ -41,6 +41,12 @@ export default function Funnel() {
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [prospectStages, setProspectStages] = useState<Record<string, number>>({});
   const [prospectEmails, setProspectEmails] = useState(0);
+  const [cpfInterested, setCpfInterested] = useState(0);
+  const [cpfTotal, setCpfTotal] = useState(0);
+  const [emailOpened, setEmailOpened] = useState(0);
+  const [emailClicked, setEmailClicked] = useState(0);
+  const [emailBounced, setEmailBounced] = useState(0);
+  const [adSpend, setAdSpend] = useState<number>(() => Number(localStorage.getItem('ln_ad_spend') || 0));
 
   useEffect(() => {
     (async () => {
@@ -82,6 +88,20 @@ export default function Funnel() {
         stages[r.stage] = (stages[r.stage] ?? 0) + 1;
       setProspectStages(stages);
       setProspectEmails(prospectEmailsRes.count ?? 0);
+
+      // Back-end (intérêt CPF) + engagement email (webhook Resend → email_events).
+      const [interestsRes, openedRes, clickedRes, bouncedRes] = await Promise.all([
+        supabase.from('lead_interests').select('interested'),
+        supabase.from('email_events').select('id', head).eq('status', 'opened'),
+        supabase.from('email_events').select('id', head).eq('status', 'clicked'),
+        supabase.from('email_events').select('id', head).eq('status', 'bounced'),
+      ]);
+      const interests = (interestsRes.data as { interested: boolean }[]) ?? [];
+      setCpfTotal(interests.length);
+      setCpfInterested(interests.filter((x) => x.interested).length);
+      setEmailOpened(openedRes.count ?? 0);
+      setEmailClicked(clickedRes.count ?? 0);
+      setEmailBounced(bouncedRes.count ?? 0);
       setLoading(false);
     })();
   }, []);
@@ -94,6 +114,9 @@ export default function Funnel() {
   const ordersPaid = orders.length;
   const revenueCents = orders.reduce((s, o) => s + (o.amount ?? 0), 0);
   const aov = ordersPaid > 0 ? revenueCents / ordersPaid : 0;
+  const cpl = leads > 0 ? adSpend / leads : 0;
+  const cac = ordersPaid > 0 ? adSpend / ordersPaid : 0;
+  const roas = adSpend > 0 ? revenueCents / 100 / adSpend : 0;
 
   const steps = [
     { label: 'Visiteurs', value: visitors, hint: 'vues page de capture (A/B)' },
@@ -132,6 +155,40 @@ export default function Funnel() {
         <Kpi label="Panier moyen" value={`${eur(aov)} €`} sub="par commande" />
         <Kpi label="Revenu / visiteur" value={visitors ? `${(revenueCents / 100 / visitors).toFixed(2)} €` : '—'} sub="EPC" />
         <Kpi label="CA total" value={`${eur(revenueCents)} €`} sub={`${ordersPaid} commande(s)`} highlight />
+      </div>
+
+      {/* Acquisition — dépense pub saisie manuellement */}
+      <div className="mb-10 rounded-xl border border-paper/10 bg-paper/5 p-5">
+        <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
+          <h2 className="font-display text-xl font-bold">Acquisition</h2>
+          <label className="text-sm text-paper/60 flex items-center gap-2">
+            Dépense pub cumulée (€)
+            <input
+              type="number"
+              value={adSpend || ''}
+              onChange={(e) => {
+                const v = Math.max(0, Number(e.target.value));
+                setAdSpend(v);
+                localStorage.setItem('ln_ad_spend', String(v));
+              }}
+              placeholder="0"
+              className="w-28 rounded-lg bg-ink border border-paper/20 px-3 py-1.5 text-sm"
+            />
+          </label>
+        </div>
+        <div className="grid md:grid-cols-4 gap-4">
+          <Kpi label="CPL" value={adSpend && leads ? `${cpl.toFixed(2)} €` : '—'} sub="coût / lead" />
+          <Kpi label="CAC" value={adSpend && ordersPaid ? `${cac.toFixed(2)} €` : '—'} sub="coût / client" />
+          <Kpi label="ROAS" value={adSpend ? `${roas.toFixed(2)}×` : '—'} sub="CA / dépense" highlight={roas >= 1} />
+          <Kpi
+            label="Revenu / visiteur"
+            value={visitors ? `${(revenueCents / 100 / visitors).toFixed(2)} €` : '—'}
+            sub="EPC"
+          />
+        </div>
+        <p className="text-paper/40 text-xs mt-3">
+          Saisis ta dépense pub totale (Meta + Google…) pour le CPL, le CAC et le ROAS. Stocké localement (ce navigateur).
+        </p>
       </div>
 
       {/* Funnel en barres */}
@@ -235,6 +292,25 @@ export default function Funnel() {
             {upsellOrders} simulateur(s) sur {kitOrders} kit(s) vendu(s)
           </p>
         </div>
+      </div>
+
+      {/* Back-end (intérêt CPF) & engagement email */}
+      <h2 className="font-display text-xl font-bold mb-4">Back-end &amp; engagement email</h2>
+      <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-4 mb-10">
+        <Kpi
+          label="Intérêt formation CPF"
+          value={pct(cpfInterested, cpfTotal)}
+          sub={`${cpfInterested} / ${cpfTotal} réponses`}
+          highlight
+        />
+        <Kpi
+          label="Ouvertures email"
+          value={String(emailOpened)}
+          sub={emailsSent ? `≈ ${pct(emailOpened, emailsSent)} des envois` : 'webhook Resend'}
+        />
+        <Kpi label="Clics email" value={String(emailClicked)} sub="webhook Resend" />
+        <Kpi label="Bounces" value={String(emailBounced)} sub="webhook Resend" />
+        <Kpi label="Relances envoyées" value={String(emailsSent)} sub="email_events" />
       </div>
 
       {/* Prospection B2B */}

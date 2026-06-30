@@ -4,6 +4,10 @@
 [functions.stripe-webhook]
 verify_jwt = false
 
+# resend-webhook : appelé par Resend (events email) sans JWT ; sécurité = signature Svix.
+[functions.resend-webhook]
+verify_jwt = false
+
 # Fonctions appelées par cron (l'en-tête Authorization est fourni dans l'appel cron).
 [functions.send-emails]
 verify_jwt = true
