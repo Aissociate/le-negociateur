@@ -12,8 +12,8 @@ const euros = (cents: number) => (cents / 100).toLocaleString('fr-FR') + ' €';
 // Bénéfices du Kit — orientés résultat, pas fonctionnalité.
 const KIT_INCLUDED = [
   {
-    t: 'Ton argumentaire chiffré, personnalisé',
-    d: 'Le montant exact à demander — ton poste, ton marché, tes chiffres — sources publiques à l’appui. Plus d’approximation, des faits.',
+    t: 'Ton argumentaire chiffré, ultra-personnalisé',
+    d: 'Le montant exact à demander, calculé pour TON poste, TON marché, TES chiffres — sources publiques à l’appui. Aucun modèle recyclé : ton cas, et lui seul.',
   },
   {
     t: 'La stratégie de négociation en 5 étapes',
@@ -154,8 +154,9 @@ export default function Kit() {
         <span className="text-gold italic">Va le chercher.</span>
       </h1>
       <p className="mt-4 text-center text-paper/75 max-w-2xl mx-auto">
-        Ton analyse t'a donné le chiffre. Le Kit te donne la méthode, les mots exacts et le plan pour le transformer en
-        <strong className="text-paper"> augmentation réelle</strong> — sans stress et sans improviser.
+        Pas un guide générique de plus. Un <strong className="text-paper">dossier de négociation construit pour toi seul</strong> —
+        à partir de ton poste, ton secteur, ta région et tes chiffres exacts. La méthode, les mots et le plan pour transformer
+        ton écart en <strong className="text-paper">augmentation réelle</strong>.
       </p>
       <div className="mt-6">
         <StatLine />
@@ -173,7 +174,9 @@ export default function Kit() {
               chaque mois, sans le voir.
             </p>
             <p className="mt-2 text-sm text-paper/80">
-              Le prix du Kit ? L'équivalent d'un dîner. Ce qu'il peut débloquer ? <strong className="text-gold">Des milliers d'euros par an, chaque année.</strong>
+              Mets les chiffres en face : le Kit coûte <strong className="text-paper">une fraction d'un seul mois</strong> de
+              l'augmentation qu'il vise. Le premier entretien le rembourse —{' '}
+              <strong className="text-gold">le reste, c'est des milliers d'euros par an, encaissés chaque année.</strong>
             </p>
           </div>
         </div>
@@ -203,7 +206,10 @@ export default function Kit() {
         <h2 className="font-display text-2xl sm:text-3xl font-bold text-center leading-tight">
           Le Kit de Négociation
         </h2>
-        <p className="mt-2 text-center text-paper/70 text-sm">Tout ce qu'il te faut pour entrer armé. Rien de superflu.</p>
+        <p className="mt-2 text-center text-paper/70 text-sm">
+          Généré <strong className="text-paper">sur-mesure à partir de ton analyse</strong> — pas un modèle. Tout ce qu'il te
+          faut pour entrer armé, rien de superflu.
+        </p>
 
         {/* Email partagé */}
         <div className="mt-6 max-w-md mx-auto">
@@ -249,6 +255,14 @@ export default function Kit() {
               </span>
             </label>
           )}
+
+          <div className="mt-6 flex items-center gap-2.5 rounded-xl bg-emerald-600/10 border border-emerald-600/30 px-4 py-3 text-emerald-700">
+            <ShieldCheck className="w-5 h-5 shrink-0" />
+            <p className="text-sm">
+              <strong>Satisfait ou remboursé sous 30 jours</strong>, sans justification. Tu testes sans aucun risque — c'est
+              nous qui le portons.
+            </p>
+          </div>
 
           <button
             onClick={() => checkout(['kit', ...(addSimu && simu ? ['simulateur'] : [])])}
