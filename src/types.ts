@@ -262,6 +262,7 @@ export interface ProspectList {
   source: 'apollo' | 'web' | 'manual';
   status: 'draft' | 'enriching' | 'ready' | 'archived';
   count: number;
+  outreach_active: boolean;
   created_at: string;
 }
 
@@ -286,6 +287,8 @@ export interface Prospect {
   stage: 'new' | 'enriched' | 'queued' | 'contacted' | 'replied' | 'won' | 'lost' | 'unsubscribed';
   consent_basis: string | null; // base légale RGPD (ex: intérêt légitime B2B)
   notes: string | null;
+  unsubscribe_token: string;
+  contacted_at: string | null;
   created_at: string;
 }
 

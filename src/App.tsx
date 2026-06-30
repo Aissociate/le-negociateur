@@ -11,6 +11,7 @@ const Merci = lazy(() => import('./pages/Merci'));
 const KitDocument = lazy(() => import('./pages/KitDocument'));
 const Personnaliser = lazy(() => import('./pages/Personnaliser'));
 const Formation = lazy(() => import('./pages/Formation'));
+const Desinscription = lazy(() => import('./pages/Desinscription'));
 const Oto = lazy(() => import('./pages/Oto'));
 const Compte = lazy(() => import('./pages/Compte'));
 const Simulateur = lazy(() => import('./pages/Simulateur'));
@@ -59,6 +60,7 @@ export default function App() {
         <Route path="/compte" element={<Compte />} />
         <Route path="/simulateur" element={<Simulateur />} />
         <Route path="/oto" element={<Oto />} />
+        <Route path="/desinscription" element={<Desinscription />} />
         <Route path="/mentions" element={<Legal page="mentions" />} />
         <Route path="/confidentialite" element={<Legal page="confidentialite" />} />
 

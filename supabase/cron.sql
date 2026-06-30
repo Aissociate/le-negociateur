@@ -50,5 +50,20 @@ select cron.schedule(
   $$
 );
 
+-- 4. Prospection (agent commercial) : envoi des emails aux listes activées,
+--    toutes les 10 minutes (lots de 25 pour préserver la délivrabilité).
+select cron.schedule(
+  'prospect-outreach-tick',
+  '*/10 * * * *',
+  $$
+  select net.http_post(
+    url := 'https://VOTRE-PROJET.supabase.co/functions/v1/prospect-outreach',
+    headers := '{"Content-Type": "application/json", "Authorization": "Bearer VOTRE_CLE_ANON"}'::jsonb,
+    body := '{}'::jsonb,
+    timeout_milliseconds := 120000
+  );
+  $$
+);
+
 -- Vérifier : select * from cron.job;
 -- Supprimer : select cron.unschedule('send-emails-tick');

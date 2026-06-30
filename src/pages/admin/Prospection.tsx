@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ShieldAlert, RefreshCw, Sparkles, Download } from 'lucide-react';
+import { ShieldAlert, RefreshCw, Sparkles, Download, Upload, Mail, Send } from 'lucide-react';
 import { supabase, callAdminFunction } from '../../lib/supabase';
 import type { Prospect, ProspectList } from '../../types';
 
@@ -14,6 +14,72 @@ const STAGE_COLORS: Record<string, string> = {
   unsubscribed: 'bg-ember/20 text-ember',
 };
 
+// Champs cibles de l'import CSV + synonymes pour le mapping automatique.
+const FIELDS: { key: string; label: string }[] = [
+  { key: 'email', label: 'Email' },
+  { key: 'full_name', label: 'Nom complet' },
+  { key: 'first_name', label: 'Prénom' },
+  { key: 'last_name', label: 'Nom' },
+  { key: 'title', label: 'Poste / titre' },
+  { key: 'company', label: 'Entreprise' },
+  { key: 'company_domain', label: 'Domaine / site' },
+  { key: 'linkedin_url', label: 'LinkedIn' },
+  { key: 'secteur', label: 'Secteur' },
+  { key: 'localisation', label: 'Localisation' },
+  { key: 'seniority', label: 'Séniorité' },
+];
+const SYNONYMS: Record<string, string[]> = {
+  email: ['email', 'mail', 'e-mail', 'courriel', 'adresse email', 'work email'],
+  full_name: ['full name', 'nom complet', 'name', 'nom', 'contact'],
+  first_name: ['first name', 'prénom', 'prenom', 'firstname'],
+  last_name: ['last name', 'nom de famille', 'lastname', 'surname'],
+  title: ['title', 'poste', 'titre', 'fonction', 'job title', 'headline'],
+  company: ['company', 'entreprise', 'société', 'societe', 'organization', 'organisation'],
+  company_domain: ['domain', 'domaine', 'website', 'site', 'company domain'],
+  linkedin_url: ['linkedin', 'linkedin url', 'profil linkedin'],
+  secteur: ['secteur', 'industry', 'industrie'],
+  localisation: ['localisation', 'location', 'ville', 'city', 'pays', 'country', 'région', 'region'],
+  seniority: ['seniority', 'séniorité', 'seniorité', 'niveau', 'level'],
+};
+
+function detectDelimiter(line: string): string {
+  const ranked = [',', ';', '\t']
+    .map((d) => [d, line.split(d).length] as const)
+    .sort((a, b) => b[1] - a[1]);
+  return ranked[0][1] > 1 ? ranked[0][0] : ',';
+}
+
+// Parseur CSV minimal mais robuste (champs entre guillemets, "" échappés, CRLF).
+function parseCSV(text: string): string[][] {
+  const nl = text.indexOf('\n');
+  const delim = detectDelimiter(text.slice(0, nl >= 0 ? nl : text.length));
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = '';
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; }
+        else inQuotes = false;
+      } else field += c;
+    } else if (c === '"') {
+      inQuotes = true;
+    } else if (c === delim) {
+      row.push(field); field = '';
+    } else if (c === '\r') {
+      /* ignore */
+    } else if (c === '\n') {
+      row.push(field); rows.push(row); row = []; field = '';
+    } else {
+      field += c;
+    }
+  }
+  if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
+  return rows.filter((r) => r.some((c) => c.trim() !== ''));
+}
+
 export default function Prospection() {
   const [lists, setLists] = useState<ProspectList[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
@@ -27,6 +93,13 @@ export default function Prospection() {
   const [maxResults, setMaxResults] = useState(50);
   const [actorId, setActorId] = useState('');
   const [override, setOverride] = useState('');
+
+  // Import CSV (ta base) + mapping
+  const [csvName, setCsvName] = useState('');
+  const [csvListName, setCsvListName] = useState('');
+  const [headers, setHeaders] = useState<string[]>([]);
+  const [dataRows, setDataRows] = useState<string[][]>([]);
+  const [mapping, setMapping] = useState<Record<string, number>>({});
 
   const loadLists = useCallback(() => {
     supabase
@@ -113,6 +186,88 @@ export default function Prospection() {
     setBusy(false);
   }
 
+  function onCsvFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCsvName(file.name);
+    setCsvListName(file.name.replace(/\.csv$/i, ''));
+    const reader = new FileReader();
+    reader.onload = () => {
+      const all = parseCSV(String(reader.result ?? ''));
+      if (all.length < 2) {
+        flash('CSV vide ou sans données.');
+        return;
+      }
+      const hdr = all[0];
+      setHeaders(hdr);
+      setDataRows(all.slice(1));
+      const guess: Record<string, number> = {};
+      FIELDS.forEach((f) => {
+        const syn = SYNONYMS[f.key] ?? [f.key];
+        guess[f.key] = hdr.findIndex((h) => syn.includes(h.trim().toLowerCase()));
+      });
+      setMapping(guess);
+    };
+    reader.readAsText(file);
+  }
+
+  async function importCsv() {
+    if (!dataRows.length) {
+      flash('Charge un CSV d’abord.');
+      return;
+    }
+    setBusy(true);
+    try {
+      const rows = dataRows.map((r) => {
+        const obj: Record<string, string> = {};
+        FIELDS.forEach((f) => {
+          const idx = mapping[f.key];
+          if (idx != null && idx >= 0 && r[idx] != null && r[idx].trim()) obj[f.key] = r[idx].trim();
+        });
+        return obj;
+      });
+      const res = await callAdminFunction<{ inserted: number }>('prospect-import-csv', {
+        list_name: csvListName,
+        rows,
+      });
+      flash(`${res.inserted} prospects importés. Enrichissement (score + angle IA) lancé en arrière-plan.`);
+      setHeaders([]);
+      setDataRows([]);
+      setCsvName('');
+      setMapping({});
+      loadLists();
+    } catch (e) {
+      flash(e instanceof Error ? e.message : 'Erreur import CSV.');
+    }
+    setBusy(false);
+  }
+
+  async function toggleOutreach(list: ProspectList) {
+    setBusy(true);
+    const { error } = await supabase
+      .from('prospect_lists')
+      .update({ outreach_active: !list.outreach_active })
+      .eq('id', list.id);
+    if (error) flash(error.message);
+    else {
+      flash(list.outreach_active ? 'Envoi mis en pause.' : 'Envoi activé — le cron enverra par lots de 25 (toutes les 10 min).');
+      loadLists();
+    }
+    setBusy(false);
+  }
+
+  async function sendBatch() {
+    setBusy(true);
+    try {
+      const res = await callAdminFunction<{ sent: number; errors?: number }>('prospect-outreach', {});
+      flash(`Lot envoyé : ${res.sent} email(s)${res.errors ? `, ${res.errors} erreur(s)` : ''}.`);
+      loadLists();
+    } catch (e) {
+      flash(e instanceof Error ? e.message : 'Erreur envoi.');
+    }
+    setBusy(false);
+  }
+
   return (
     <div>
       <h1 className="font-display text-3xl font-bold mb-2">Prospection — agent commercial</h1>
@@ -189,8 +344,74 @@ export default function Prospection() {
         </button>
       </div>
 
+      {/* Import CSV (ta base) */}
+      <div className="bg-paper/5 rounded-xl p-6 mb-10 max-w-3xl">
+        <h2 className="font-display text-xl font-bold mb-1">Importer ta base (CSV)</h2>
+        <p className="text-xs text-paper/50 mb-4">
+          Charge un fichier CSV, associe tes colonnes aux champs, puis importe. Délimiteur (<code>,</code> ou{' '}
+          <code>;</code>) détecté automatiquement. Prospection <strong>B2B</strong> uniquement.
+        </p>
+        <input type="file" accept=".csv,text/csv" onChange={onCsvFile} className="text-sm text-paper/70" />
+
+        {headers.length > 0 && (
+          <div className="mt-5">
+            <div className="mb-4">
+              <label className="block text-xs text-paper/50 mb-1">Nom de la liste</label>
+              <input
+                value={csvListName}
+                onChange={(e) => setCsvListName(e.target.value)}
+                className="w-full max-w-sm rounded-lg bg-ink border border-paper/20 px-3 py-2 text-sm"
+              />
+            </div>
+            <p className="text-xs text-paper/50 mb-2 uppercase tracking-wide">Associe tes colonnes</p>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {FIELDS.map((f) => (
+                <div key={f.key}>
+                  <label className="block text-xs text-paper/50 mb-1">
+                    {f.label}
+                    {f.key === 'email' && <span className="text-gold"> *</span>}
+                  </label>
+                  <select
+                    value={mapping[f.key] ?? -1}
+                    onChange={(e) => setMapping((m) => ({ ...m, [f.key]: Number(e.target.value) }))}
+                    className="w-full rounded-lg bg-ink border border-paper/20 px-3 py-2 text-sm"
+                  >
+                    <option value={-1}>— ignorer —</option>
+                    {headers.map((h, i) => (
+                      <option key={i} value={i}>
+                        {h || `Colonne ${i + 1}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-paper/40 mt-3">
+              {dataRows.length} ligne(s) détectée(s) dans « {csvName} ».
+            </p>
+            <button
+              onClick={importCsv}
+              disabled={busy}
+              className="mt-4 bg-gold text-ink font-bold px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 disabled:opacity-50"
+            >
+              <Upload className="w-4 h-4" /> Importer {dataRows.length} prospect(s)
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* Listes */}
-      <h2 className="font-display text-xl font-bold mb-3">Listes ({lists.length})</h2>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="font-display text-xl font-bold">Listes ({lists.length})</h2>
+        <button
+          onClick={sendBatch}
+          disabled={busy}
+          className="text-xs flex items-center gap-1 bg-gold/20 text-gold px-3 py-1.5 rounded disabled:opacity-50"
+          title="Envoie immédiatement un lot aux listes dont l'envoi est activé"
+        >
+          <Send className="w-3 h-3" /> Envoyer un lot maintenant
+        </button>
+      </div>
       <table className="w-full text-sm mb-10">
         <thead>
           <tr className="text-left text-paper/50 border-b border-paper/10">
@@ -216,6 +437,15 @@ export default function Prospection() {
                 </button>
                 <button onClick={() => enrich(l.id)} disabled={busy} className="text-xs flex items-center gap-1 bg-paper/10 px-2.5 py-1 rounded disabled:opacity-50">
                   <Sparkles className="w-3 h-3" /> Enrichir
+                </button>
+                <button
+                  onClick={() => toggleOutreach(l)}
+                  disabled={busy}
+                  className={`text-xs flex items-center gap-1 px-2.5 py-1 rounded disabled:opacity-50 ${
+                    l.outreach_active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-paper/10'
+                  }`}
+                >
+                  <Mail className="w-3 h-3" /> {l.outreach_active ? 'Envoi ON' : "Activer l'envoi"}
                 </button>
                 <button onClick={() => setSelected(l.id)} className="text-xs text-gold font-bold px-2.5 py-1">
                   Voir
