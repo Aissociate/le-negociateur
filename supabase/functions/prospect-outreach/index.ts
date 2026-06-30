@@ -64,7 +64,7 @@ Deno.serve(async (_req) => {
           angle: (p.enrichment?.angle as string) ?? '',
           research: researchText,
           hooks: (research?.hooks ?? []).join(' | ') || 'n/c',
-          cta_url: `${siteUrl}/`,
+          cta_url: `${siteUrl}/analyse`,
         },
         { jsonMode: true }
       );

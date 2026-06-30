@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
         : { customer_creation: 'always', payment_intent_data: { setup_future_usage: 'off_session' } }),
       success_url: isSubscription
         ? `${siteUrl}/compte?welcome=1`
-        : `${siteUrl}/merci?session_id={CHECKOUT_SESSION_ID}`,
+        : `${siteUrl}/formation?session={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl}/kit`,
     });
 

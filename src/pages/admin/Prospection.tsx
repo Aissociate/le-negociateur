@@ -49,6 +49,7 @@ export default function Prospection() {
   const [prospects, setProspects] = useState<Prospect[]>([]);
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
+  const [detail, setDetail] = useState<Prospect | null>(null);
 
   // Formulaire d'import
   const [listName, setListName] = useState('');
@@ -441,13 +442,13 @@ export default function Prospection() {
                 <tr key={p.id} className="border-b border-paper/5">
                   <td className="py-2 pr-3 font-bold text-gold">{p.score}</td>
                   <td className="py-2 pr-3">
-                    {p.linkedin_url ? (
-                      <a href={p.linkedin_url} target="_blank" rel="noreferrer" className="underline hover:text-gold">
-                        {p.full_name}
-                      </a>
-                    ) : (
-                      p.full_name
-                    )}
+                    <button
+                      onClick={() => setDetail(p)}
+                      className="underline hover:text-gold text-left"
+                      title="Voir la fiche complète"
+                    >
+                      {p.full_name}
+                    </button>
                   </td>
                   <td className="py-2 pr-3 text-paper/70">{p.title ?? '—'}</td>
                   <td className="py-2 pr-3 text-paper/70">{p.company ?? '—'}</td>
@@ -500,6 +501,152 @@ export default function Prospection() {
           </table>
         </div>
       )}
+
+      {/* Fiche prospect détaillée */}
+      {detail && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onClick={() => setDetail(null)}
+        >
+          <div
+            className="bg-ink border border-paper/15 rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-auto p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {(() => {
+              const r = detail.enrichment?.research as
+                | {
+                    summary?: string;
+                    company_context?: string;
+                    role_context?: string;
+                    hooks?: string[];
+                    sources?: string[];
+                  }
+                | null
+                | undefined;
+              return (
+                <>
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h3 className="font-display text-2xl font-bold">{detail.full_name}</h3>
+                      <p className="text-paper/60 text-sm">
+                        {[detail.title, detail.company].filter(Boolean).join(' · ') || '—'}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setDetail(null)}
+                      className="text-paper/50 hover:text-paper text-3xl leading-none"
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 mb-5 text-xs">
+                    <span className="px-2 py-0.5 rounded-full bg-gold/20 text-gold font-bold">Score {detail.score}</span>
+                    <span className={`px-2 py-0.5 rounded-full ${STAGE_COLORS[detail.stage] ?? 'bg-paper/10'}`}>
+                      {detail.stage}
+                    </span>
+                    {detail.secteur && <span className="px-2 py-0.5 rounded-full bg-paper/10">{detail.secteur}</span>}
+                    {detail.localisation && (
+                      <span className="px-2 py-0.5 rounded-full bg-paper/10">{detail.localisation}</span>
+                    )}
+                    {detail.seniority && <span className="px-2 py-0.5 rounded-full bg-paper/10">{detail.seniority}</span>}
+                  </div>
+
+                  <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-2 text-sm mb-5">
+                    <Field label="Email">{detail.email ? `${detail.email} (${detail.email_status})` : '—'}</Field>
+                    <Field label="LinkedIn">
+                      {detail.linkedin_url ? (
+                        <a className="text-gold underline" href={detail.linkedin_url} target="_blank" rel="noreferrer">
+                          profil
+                        </a>
+                      ) : (
+                        '—'
+                      )}
+                    </Field>
+                    <Field label="Domaine">{detail.company_domain ?? '—'}</Field>
+                    <Field label="Contacté le">
+                      {detail.contacted_at ? new Date(detail.contacted_at).toLocaleString('fr-FR') : '—'}
+                    </Field>
+                    <Field label="Base légale (RGPD)">{detail.consent_basis ?? '—'}</Field>
+                    <Field label="Créé le">{new Date(detail.created_at).toLocaleDateString('fr-FR')}</Field>
+                  </dl>
+
+                  {(detail.enrichment?.angle as string) && (
+                    <Section title="Angle d'approche IA">
+                      <p>{detail.enrichment?.angle as string}</p>
+                      {(detail.enrichment?.rationale as string) && (
+                        <p className="text-paper/50 text-xs mt-1">{detail.enrichment?.rationale as string}</p>
+                      )}
+                    </Section>
+                  )}
+
+                  <Section title="Recherche web (Perplexity)">
+                    {r?.summary ? (
+                      <>
+                        <p>{r.summary}</p>
+                        {r.company_context && (
+                          <p className="mt-2">
+                            <span className="text-paper/50">Société : </span>
+                            {r.company_context}
+                          </p>
+                        )}
+                        {r.role_context && (
+                          <p className="mt-1">
+                            <span className="text-paper/50">Rôle : </span>
+                            {r.role_context}
+                          </p>
+                        )}
+                        {!!r.hooks?.length && (
+                          <ul className="mt-2 list-disc list-inside text-paper/80">
+                            {r.hooks.map((h, i) => (
+                              <li key={i}>{h}</li>
+                            ))}
+                          </ul>
+                        )}
+                        {!!r.sources?.length && (
+                          <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                            {r.sources.map((s, i) => (
+                              <a key={i} href={s} target="_blank" rel="noreferrer" className="text-gold/80 underline">
+                                source {i + 1}
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-paper/40">Pas encore enrichi — lance « Enrichir » sur la liste.</p>
+                    )}
+                  </Section>
+
+                  {detail.notes && (
+                    <Section title="Notes">
+                      <p>{detail.notes}</p>
+                    </Section>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <dt className="text-paper/50 text-xs">{label}</dt>
+      <dd className="text-paper/85">{children}</dd>
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="mb-4 bg-paper/5 rounded-lg p-3 text-sm text-paper/85">
+      <p className="text-xs uppercase tracking-wide text-paper/40 mb-1">{title}</p>
+      {children}
     </div>
   );
 }

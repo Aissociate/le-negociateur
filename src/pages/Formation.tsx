@@ -35,7 +35,7 @@ export default function Formation() {
   const [busy, setBusy] = useState<null | 'oui' | 'non'>(null);
 
   function next() {
-    navigate(`/personnaliser${session ? `?session=${encodeURIComponent(session)}` : ''}`);
+    navigate(`/merci${session ? `?session_id=${encodeURIComponent(session)}` : ''}`);
   }
 
   async function choose(interested: boolean) {
