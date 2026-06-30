@@ -129,9 +129,16 @@ export default function Kit() {
   }, []);
   useEffect(() => {
     const tick = () => {
-      const now = new Date();
-      const next = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1);
-      const total = Math.max(0, Math.floor((next - now.getTime()) / 1000));
+      // Temps restant jusqu'à minuit heure de Paris (gère l'heure d'été/hiver).
+      const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Europe/Paris',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hourCycle: 'h23',
+      }).formatToParts(new Date());
+      const get = (t: string) => Number(parts.find((p) => p.type === t)?.value ?? 0);
+      const total = 86400 - (get('hour') * 3600 + get('minute') * 60 + get('second'));
       const h = Math.floor(total / 3600);
       const m = Math.floor((total % 3600) / 60);
       const s = total % 60;

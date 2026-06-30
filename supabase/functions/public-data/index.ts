@@ -26,7 +26,18 @@ Deno.serve(async (req) => {
   // se règle via LAUNCH_DAILY_QUOTA (raison : capacité de génération/curation/jour).
   if (stat === 'launch') {
     const now = new Date();
-    const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
+    // Début de journée à minuit heure de Paris (gère l'heure d'été/hiver) : on soustrait
+    // le temps écoulé depuis minuit Paris à l'instant courant.
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Europe/Paris',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(now);
+    const get = (t: string) => Number(parts.find((p) => p.type === t)?.value ?? 0);
+    const elapsedMs = (get('hour') * 3600 + get('minute') * 60 + get('second')) * 1000;
+    const start = new Date(now.getTime() - elapsedMs).toISOString();
     const quota = Number(Deno.env.get('LAUNCH_DAILY_QUOTA') ?? '20');
     const { count } = await db
       .from('orders')
