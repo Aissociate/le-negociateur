@@ -16,27 +16,27 @@ const KIT_INCLUDED = [
   {
     t: 'Ton argumentaire chiffré, ultra-personnalisé',
     d: 'Le montant exact à demander, calculé pour TON poste, TON marché, TES chiffres — sources publiques à l’appui. Aucun modèle recyclé : ton cas, et lui seul.',
-    v: 89,
+    v: 199,
   },
   {
     t: 'La stratégie de négociation en 5 étapes',
     d: 'De la prise de rendez-vous à la signature : quoi dire, quand le dire, et dans quel ordre pour garder la main.',
-    v: 49,
+    v: 99,
   },
   {
     t: 'Tes scripts mot à mot',
     d: 'La demande, l’annonce du chiffre, le silence qui fait céder, la conclusion. À lire tel quel, même si tu détestes négocier.',
-    v: 49,
+    v: 89,
   },
   {
     t: 'Les réponses aux 12 objections les plus fréquentes',
     d: '« Ce n’est pas le moment », « le budget est gelé », « ça ne dépend pas de moi »… toutes désamorcées d’avance.',
-    v: 39,
+    v: 59,
   },
   {
     t: 'Ton plan B hors salaire + l’email de verrouillage',
     d: 'Télétravail, jours de congés, prime, formation financée… et l’email qui grave l’accord noir sur blanc après l’entretien.',
-    v: 39,
+    v: 53,
   },
 ];
 const KIT_TOTAL_VALUE = KIT_INCLUDED.reduce((s, f) => s + f.v, 0);
