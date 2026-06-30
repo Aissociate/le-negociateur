@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Check, ShieldCheck, Loader2, ArrowRight, AlertTriangle, Quote, Lock, Star, RefreshCw, Target, MessageSquareText, Flame } from 'lucide-react';
+import { Check, ShieldCheck, Loader as Loader2, ArrowRight, TriangleAlert as AlertTriangle, Quote, Lock, Star, RefreshCw, Target, MessageSquareText, Flame } from 'lucide-react';
 import Layout from '../components/Layout';
 import SocialProofToaster from '../components/SocialProofToaster';
 import { supabase, callFunction, getFunction } from '../lib/supabase';
@@ -417,7 +417,7 @@ export default function Kit() {
           ))}
         </div>
         <p className="mt-4 text-center text-[11px] text-paper/40">
-          Témoignages illustratifs · gains indicatifs, non garantis.
+          Témoignages informatifs · gains indicatifs, non garantis.
         </p>
       </section>
 
