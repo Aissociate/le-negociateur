@@ -195,6 +195,9 @@ export default function Kit() {
       <div className="mt-6">
         <StatLine />
       </div>
+      <p className="mt-3 text-center text-xs text-paper/40">
+        Données officielles : INSEE · DARES · APEC · France Travail
+      </p>
 
       {/* Ancrage personnalisé prix / gain (si le visiteur vient de son rapport) */}
       {gapAnnual > 0 && kit && (
@@ -307,6 +310,9 @@ export default function Kit() {
             <span className="font-bold">Ton prix aujourd'hui</span>
             <span className="font-display text-2xl font-bold text-ink">{kit ? euros(kit.price_cents) : '—'}</span>
           </div>
+          <p className="mt-1 text-xs text-ink/45">
+            Prix de lancement — généré en temps réel à partir de données publiques officielles.
+          </p>
 
           {simu && (
             <label className="flex items-start gap-3 mt-6 rounded-xl border-2 border-dashed border-gold/60 bg-gold/5 p-4 cursor-pointer">
@@ -394,6 +400,17 @@ export default function Kit() {
         </div>
       </section>
 
+      {/* 7bis. Projection (future pacing) — sobre */}
+      <section className="mt-14">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 text-center max-w-2xl mx-auto">
+          <h2 className="font-display text-xl font-bold">Imagine ton prochain entretien</h2>
+          <p className="mt-2 text-sm text-paper/70">
+            Tu poses tes chiffres sur la table, calmement. Tu sais quoi répondre à chaque objection. Tu ne demandes pas
+            une faveur — tu défends un fait. Et tu repars avec ce que tu vaux vraiment.
+          </p>
+        </div>
+      </section>
+
       {/* 8. CTA final */}
       <section className="mt-14 text-center border-t border-white/10 pt-12">
         <h2 className="font-display text-2xl sm:text-3xl font-bold leading-tight">
@@ -408,6 +425,10 @@ export default function Kit() {
         </button>
         <p className="mt-3 text-xs text-paper/50">
           Paiement sécurisé Stripe · Satisfait ou remboursé 30 jours · Généré à partir de ton analyse.
+        </p>
+        <p className="mt-10 text-sm text-paper/55 italic max-w-2xl mx-auto">
+          P.S. — Chaque mois sans rien faire, ton écart se cumule : salaire, prime, droits à la retraite. Le Kit est
+          garanti 30 jours, satisfait ou remboursé. Tu ne risques rien à le tester — tout à laisser filer.
         </p>
       </section>
 
