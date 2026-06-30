@@ -320,7 +320,7 @@ export default function Kit() {
             <h3 className="font-display text-xl font-bold">{kit?.name ?? 'Le Kit de Négociation'}</h3>
             <p className="font-display text-2xl font-bold">
               {kit ? euros(kit.price_cents) : '—'}
-              {kit?.compare_at_cents && (
+              {kit?.compare_at_cents != null && kit.compare_at_cents > kit.price_cents && (
                 <span className="ml-2 text-base text-ink/40 line-through font-normal">{euros(kit.compare_at_cents)}</span>
               )}
             </p>
