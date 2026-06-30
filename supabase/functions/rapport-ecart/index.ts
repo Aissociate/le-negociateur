@@ -8,6 +8,7 @@ import { serviceClient } from '../_shared/db.ts';
 import { handleOptions, json } from '../_shared/cors.ts';
 import { callLLM } from '../_shared/llm.ts';
 import { aggregateSalaryIntel } from '../_shared/salary_sources.ts';
+import { fetchLiveOffers } from '../_shared/live_offers.ts';
 
 interface Input {
   poste: string;
@@ -73,38 +74,70 @@ Deno.serve(async (req) => {
       .maybeSingle();
     const coef = coefRow?.coef ?? 1.0;
 
-    const marketLow = Math.round(match.salaire_bas * coef);
-    const marketMedian = Math.round(match.salaire_median * coef);
-    const marketHigh = Math.round(match.salaire_haut * coef);
-    const gapAnnual = marketMedian - input.remuneration_actuelle;
-    const gapPercent = Math.round((gapAnnual / marketMedian) * 100);
+    const baseLow = Math.round(match.salaire_bas * coef);
+    const baseMedian = Math.round(match.salaire_median * coef);
+    const baseHigh = Math.round(match.salaire_haut * coef);
     const tension = !!match.metier_en_tension;
 
-    const segment =
-      gapPercent >= 15 ? 'sous-payé fort' : gapPercent >= 5 ? 'sous-payé léger' : gapPercent >= -5 ? 'aligné' : 'au-dessus';
-    const position =
-      gapPercent >= 5 ? 'en dessous de la médiane' : gapPercent <= -5 ? 'au-dessus de la médiane' : 'aligné sur la médiane';
-
-    // 3. Agrégation multi-sources externes (best-effort, ne bloque jamais)
-    let intel = { sources: {}, normalized: { providers_ok: [] as string[] } as Record<string, unknown> };
-    try {
-      intel = await aggregateSalaryIntel({
+    // 3. Enrichissements best-effort EN PARALLÈLE : sources externes + offres réelles
+    //    (Perplexity Sonar). Aucun ne bloque ni ne ralentit l'autre ; le rapport
+    //    se génère même si les deux échouent.
+    const [intelRes, live] = await Promise.all([
+      aggregateSalaryIntel({
         poste: input.poste,
         secteur: input.secteur,
         seniorite: input.seniorite,
         localisation: input.localisation,
         remuneration_actuelle: input.remuneration_actuelle,
         code_rome: match.code_rome ?? null,
-        market_median: marketMedian,
-      });
-    } catch (_) {
-      /* best-effort */
+        market_median: baseMedian,
+      }).catch(() => null),
+      fetchLiveOffers(db, {
+        poste: input.poste,
+        secteur: input.secteur,
+        seniorite: input.seniorite,
+        localisation: input.localisation,
+        market_median: baseMedian,
+      }),
+    ]);
+    const intel = intelRes ?? { sources: {}, normalized: { providers_ok: [] as string[] } as Record<string, unknown> };
+
+    // Fourchette affinée par les offres réelles : on élargit la bande et on recale
+    // la médiane (pondérée 60 % réf. interne / 40 % offres) pour éviter les à-coups.
+    let marketLow = baseLow;
+    let marketMedian = baseMedian;
+    let marketHigh = baseHigh;
+    if (live?.found) {
+      if (live.low) marketLow = Math.min(marketLow, live.low);
+      if (live.high) marketHigh = Math.max(marketHigh, live.high);
+      if (live.median) marketMedian = Math.round(baseMedian * 0.6 + live.median * 0.4);
+      marketMedian = Math.min(Math.max(marketMedian, marketLow), marketHigh);
     }
+
+    const gapAnnual = marketMedian - input.remuneration_actuelle;
+    const gapPercent = Math.round((gapAnnual / marketMedian) * 100);
+
+    const segment =
+      gapPercent >= 15 ? 'sous-payé fort' : gapPercent >= 5 ? 'sous-payé léger' : gapPercent >= -5 ? 'aligné' : 'au-dessus';
+    const position =
+      gapPercent >= 5 ? 'en dessous de la médiane' : gapPercent <= -5 ? 'au-dessus de la médiane' : 'aligné sur la médiane';
 
     // Projections chiffrées (factuelles, calculées serveur)
     const gap5y = gapAnnual > 0 ? gapAnnual * 5 : 0;
     const upsideToHigh = Math.max(0, marketHigh - input.remuneration_actuelle);
-    const reportIntel = { ...intel.normalized, gap_5y: gap5y, upside_to_high: upsideToHigh };
+    const offresFourchette =
+      live?.found && (live.low || live.high)
+        ? `${(live.low ?? live.median ?? marketLow).toLocaleString('fr-FR')} – ${(
+            live.high ?? live.median ?? marketHigh
+          ).toLocaleString('fr-FR')} € bruts/an (${live.count} offres)`
+        : 'n/c';
+    const offresLive = live?.found && live.synthese ? live.synthese : 'n/c';
+    const reportIntel = {
+      ...intel.normalized,
+      gap_5y: gap5y,
+      upside_to_high: upsideToHigh,
+      live_offers: live?.found ? live : null,
+    };
 
     // 4. Lead (upsert par email) + programmation du premier email
     const { data: firstEmail } = await db.from('email_sequences').select('delay_hours').eq('step', 1).single();
@@ -164,6 +197,8 @@ Deno.serve(async (req) => {
       gap_5y: gap5y,
       upside_to_high: upsideToHigh,
       providers: (n.providers_ok as string[] | undefined)?.join(', ') || 'référentiel interne',
+      offres_fourchette: offresFourchette,
+      offres_live: offresLive,
     };
     let analysis = '';
     try {
@@ -210,7 +245,7 @@ Deno.serve(async (req) => {
       localisation: input.localisation,
       code_rome: match.code_rome ?? null,
       remuneration_actuelle: input.remuneration_actuelle,
-      sources: intel.sources,
+      sources: { ...intel.sources, live_offers: live?.found ? live : null },
       normalized: reportIntel,
     });
 

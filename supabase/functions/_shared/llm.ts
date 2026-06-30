@@ -25,7 +25,7 @@ export async function callLLM(
   db: SupabaseClient,
   agent: string,
   vars: Record<string, string | number>,
-  options: { jsonMode?: boolean } = {}
+  options: { jsonMode?: boolean; timeoutMs?: number } = {}
 ): Promise<LLMResult> {
   const { data: config, error } = await db
     .from('agent_config')
@@ -38,6 +38,9 @@ export async function callLLM(
   const start = Date.now();
   let result: LLMResult | null = null;
   let detail = '';
+  // Borne optionnelle (ex. Perplexity Sonar qui fait de la recherche web).
+  const ctrl = options.timeoutMs ? new AbortController() : undefined;
+  const timer = ctrl ? setTimeout(() => ctrl.abort(), options.timeoutMs) : undefined;
 
   try {
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -46,6 +49,7 @@ export async function callLLM(
         Authorization: `Bearer ${Deno.env.get('OPENROUTER_API_KEY')}`,
         'Content-Type': 'application/json',
       },
+      signal: ctrl?.signal,
       body: JSON.stringify({
         model: config.model,
         temperature: config.temperature,
@@ -71,6 +75,7 @@ export async function callLLM(
     detail = err instanceof Error ? err.message : String(err);
     throw err;
   } finally {
+    if (timer) clearTimeout(timer);
     await db.from('agent_runs').insert({
       agent,
       status: result ? 'ok' : 'error',
