@@ -3,6 +3,7 @@
 
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2';
 import { callLLM } from './llm.ts';
+import { researchContact, researchToText } from './contact_research.ts';
 
 // deno-lint-ignore no-explicit-any
 function pick(o: any, keys: string[]): string | null {
@@ -119,12 +120,28 @@ export async function enrichBatch(db: SupabaseClient, listId: string, limit: num
   let enriched = 0;
   for (const p of prospects ?? []) {
     try {
+      // 1. Recherche web sur le contact (Perplexity Sonar) — best-effort, peut être null
+      //    (agent désactivé / échec / timeout). Stockée sur la fiche pour réutilisation.
+      const research = await researchContact(db, {
+        full_name: p.full_name,
+        first_name: p.first_name,
+        title: p.title,
+        company: p.company,
+        company_domain: p.company_domain,
+        linkedin_url: p.linkedin_url,
+        secteur: p.secteur,
+        localisation: p.localisation,
+        seniority: p.seniority,
+      });
+
+      // 2. Scoring + angle d'approche, désormais nourri par la recherche web.
       const vars = {
         full_name: p.full_name,
         title: p.title ?? '',
         company: p.company ?? '',
         secteur: p.secteur ?? '',
         seniority: p.seniority ?? '',
+        research: researchToText(research),
         signals: JSON.stringify(p.enrichment ?? {}).slice(0, 500),
       };
       const out = await callLLM(db, 'enrichissement_prospect', vars, { jsonMode: true });
@@ -140,7 +157,13 @@ export async function enrichBatch(db: SupabaseClient, listId: string, limit: num
         .from('prospects')
         .update({
           score,
-          enrichment: { ...(p.enrichment ?? {}), angle: parsed.angle ?? null, rationale: parsed.rationale ?? null },
+          enrichment: {
+            ...(p.enrichment ?? {}),
+            angle: parsed.angle ?? null,
+            rationale: parsed.rationale ?? null,
+            research: research ?? null,
+            sources: research?.sources ?? [],
+          },
           stage: 'enriched',
         })
         .eq('id', p.id);

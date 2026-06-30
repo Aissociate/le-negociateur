@@ -432,7 +432,8 @@ export default function Prospection() {
                 <th className="py-2 pr-3">Entreprise</th>
                 <th className="py-2 pr-3">Email</th>
                 <th className="py-2 pr-3">Stage</th>
-                <th className="py-2">Angle IA</th>
+                <th className="py-2 pr-3">Angle IA</th>
+                <th className="py-2">Recherche web</th>
               </tr>
             </thead>
             <tbody>
@@ -459,8 +460,39 @@ export default function Prospection() {
                       {p.stage}
                     </span>
                   </td>
-                  <td className="py-2 text-paper/60 max-w-xs truncate">
+                  <td className="py-2 pr-3 text-paper/60 max-w-xs truncate">
                     {(p.enrichment?.angle as string) ?? '—'}
+                  </td>
+                  <td className="py-2 text-paper/60 max-w-sm">
+                    {(() => {
+                      const r = p.enrichment?.research as
+                        | { summary?: string; sources?: string[] }
+                        | null
+                        | undefined;
+                      if (!r?.summary) return <span className="text-paper/30">—</span>;
+                      return (
+                        <div className="space-y-1">
+                          <p className="line-clamp-2" title={r.summary}>
+                            {r.summary}
+                          </p>
+                          {!!r.sources?.length && (
+                            <div className="flex flex-wrap gap-1.5 text-xs">
+                              {r.sources.slice(0, 3).map((s, i) => (
+                                <a
+                                  key={i}
+                                  href={s}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-gold/80 underline hover:text-gold"
+                                >
+                                  source {i + 1}
+                                </a>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </td>
                 </tr>
               ))}

@@ -39,6 +39,20 @@ Deno.serve(async (_req) => {
       db.from('prospects').update({ stage: 'contacted', contacted_at: new Date().toISOString() }).eq('id', p.id);
 
     try {
+      // Contexte issu de la recherche web (enrichissement) pour un email sur-mesure.
+      const research = (p.enrichment?.research ?? null) as
+        | { summary?: string; company_context?: string; role_context?: string; hooks?: string[] }
+        | null;
+      const researchText = research
+        ? [
+            research.summary && `Synthèse : ${research.summary}`,
+            research.company_context && `Société : ${research.company_context}`,
+            research.role_context && `Rôle : ${research.role_context}`,
+          ]
+            .filter(Boolean)
+            .join('\n')
+        : 'n/c';
+
       const out = await callLLM(
         db,
         'email_prospection',
@@ -48,6 +62,8 @@ Deno.serve(async (_req) => {
           company: p.company ?? '',
           secteur: p.secteur ?? '',
           angle: (p.enrichment?.angle as string) ?? '',
+          research: researchText,
+          hooks: (research?.hooks ?? []).join(' | ') || 'n/c',
           cta_url: `${siteUrl}/`,
         },
         { jsonMode: true }
