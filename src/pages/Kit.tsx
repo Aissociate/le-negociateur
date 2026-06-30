@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Check, ShieldCheck, Loader2, ArrowRight, AlertTriangle, Quote, Lock, Star, RefreshCw, Target, MessageSquareText } from 'lucide-react';
+import { Check, ShieldCheck, Loader2, ArrowRight, AlertTriangle, Quote, Lock, Star, RefreshCw, Target, MessageSquareText, Flame } from 'lucide-react';
 import Layout from '../components/Layout';
 import SocialProofToaster from '../components/SocialProofToaster';
 import { supabase, callFunction, getFunction } from '../lib/supabase';
@@ -119,6 +119,26 @@ export default function Kit() {
       .catch(() => {});
   }, [searchParams]);
 
+  // Quota de lancement du jour (réel) + compte à rebours vers la réinitialisation (minuit UTC).
+  const [launch, setLaunch] = useState<{ remaining: number; quota: number } | null>(null);
+  const [resetIn, setResetIn] = useState('');
+  useEffect(() => {
+    getFunction<{ remaining?: number; quota?: number }>('public-data', { stat: 'launch' })
+      .then((r) => setLaunch({ remaining: Number(r?.remaining ?? 0), quota: Number(r?.quota ?? 0) }))
+      .catch(() => {});
+  }, []);
+  useEffect(() => {
+    const tick = () => {
+      const now = new Date();
+      const next = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1);
+      const mins = Math.max(0, Math.floor((next - now.getTime()) / 60000));
+      setResetIn(`${Math.floor(mins / 60)}h ${String(mins % 60).padStart(2, '0')}m`);
+    };
+    tick();
+    const iv = window.setInterval(tick, 60000);
+    return () => window.clearInterval(iv);
+  }, []);
+
   // Exit-intent (desktop) : à la sortie, on propose le downsell (Argumentaire Éclair).
   const [showExit, setShowExit] = useState(false);
   const exitShown = useRef(false);
@@ -198,6 +218,23 @@ export default function Kit() {
       <p className="mt-3 text-center text-xs text-paper/40">
         Données officielles : INSEE · DARES · APEC · France Travail
       </p>
+
+      {/* Tarif de lancement — quota quotidien réel (raison : capacité de génération/jour) */}
+      {launch && launch.remaining > 0 && (
+        <div className="mt-6 mx-auto max-w-xl rounded-xl border border-ember/30 bg-ember/[0.06] px-4 py-3 text-center">
+          <p className="text-sm text-paper/85 flex items-center justify-center gap-2">
+            <Flame className="w-4 h-4 text-ember shrink-0" />
+            <span>
+              <strong className="text-paper">Tarif de lancement</strong> — plus que{' '}
+              <strong className="text-ember">{launch.remaining}</strong> Kit{launch.remaining > 1 ? 's' : ''} à ce prix
+              aujourd'hui
+            </span>
+          </p>
+          <p className="mt-1 text-xs text-paper/45">
+            Volume quotidien limité (génération + vérification en temps réel) · réinitialisation dans {resetIn}
+          </p>
+        </div>
+      )}
 
       {/* Ancrage personnalisé prix / gain (si le visiteur vient de son rapport) */}
       {gapAnnual > 0 && kit && (

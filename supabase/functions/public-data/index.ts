@@ -21,6 +21,23 @@ Deno.serve(async (req) => {
     return json({ analyses: count ?? 0 });
   }
 
+  // Quota quotidien de lancement (RÉEL) : nb de Kits au tarif de lancement encore
+  // disponibles aujourd'hui = quota - Kits déjà vendus depuis minuit UTC. Le quota
+  // se règle via LAUNCH_DAILY_QUOTA (raison : capacité de génération/curation/jour).
+  if (stat === 'launch') {
+    const now = new Date();
+    const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
+    const quota = Number(Deno.env.get('LAUNCH_DAILY_QUOTA') ?? '20');
+    const { count } = await db
+      .from('orders')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'paid')
+      .gte('created_at', start)
+      .contains('product_slugs', ['kit']);
+    const sold = count ?? 0;
+    return json({ quota, sold_today: sold, remaining: Math.max(0, quota - sold) });
+  }
+
   const reportId = url.searchParams.get('report');
   if (reportId) {
     const { data } = await db.from('gap_reports').select('*').eq('id', reportId).maybeSingle();
