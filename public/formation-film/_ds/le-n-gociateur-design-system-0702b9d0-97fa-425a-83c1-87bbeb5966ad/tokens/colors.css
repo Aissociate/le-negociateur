@@ -1,0 +1,79 @@
+/* COLOR SYSTEM — Le Négociateur  (premium: noir · blanc · or)
+   Encre  = noir premium chaud — surfaces sombres + actions primaires
+   Or     = ocre / or — accent & richesse (the wealth signature)
+   Papier = blanc cassé chaud (fonds) + blanc pur (cartes)
+   Rouge  = ALERTES uniquement (erreur, danger, "manque à gagner")
+   Black, white, gold — red only when something's wrong.
+*/
+:root {
+  /* —— Or (ochre / gold — accent + wealth, the brand signature) —— */
+  --or-900: #3A2A10;
+  --or-800: #5A4015;
+  --or-700: #856221;
+  --or-600: #A87C2B; /* gold text on white */
+  --or-500: #C2872E; /* OCHRE accent */
+  --or-400: #D6A24E;
+  --or-300: #E7C588;
+  --or-200: #F1DEB4;
+  --or-100: #F8EED9;
+
+  /* —— Encre (premium warm near-black + neutrals — primary actions, dark surfaces) —— */
+  --encre-950: #16130D;
+  --encre-900: #211C14;
+  --encre-800: #2F281D;
+  --encre-700: #423829;
+  --encre-600: #5A4E3B;
+  --encre-500: #736654;
+  --encre-400: #948876;
+  --encre-300: #B7AC9A;
+  --encre-200: #D6CDBE;
+  --encre-100: #ECE6DB;
+
+  /* —— Papier (warm white surfaces) —— */
+  --papier-700: #ECE6DA;
+  --papier-500: #F4F0E8;
+  --papier-300: #F9F6F0;
+  --papier-100: #FCFBF8; /* page — premium warm white */
+  --white: #FFFFFF;      /* cards */
+
+  /* —— Rouge (ALERTS ONLY) —— */
+  --rouge-700: #9A1B12;
+  --rouge-600: #C12318;
+  --rouge-500: #DD3325;
+  --rouge-200: #F4C2BB;
+  --rouge-100: #FBE2DD;
+
+  /* ============ SEMANTIC ALIASES ============ */
+  --color-primary: var(--encre-950);        /* premium black primary actions */
+  --color-primary-strong: var(--encre-900);
+  --color-accent: var(--or-500);             /* ochre gold */
+  --color-accent-strong: var(--or-600);
+  --color-success: var(--or-600);            /* gains are golden */
+  --color-danger: var(--rouge-500);          /* alerts only */
+  --color-premium: var(--or-500);
+
+  --text-strong: var(--encre-950);
+  --text-body: var(--encre-800);
+  --text-muted: var(--encre-500);
+  --text-faint: var(--encre-400);
+  --text-on-dark: var(--papier-100);
+  --text-on-dark-muted: var(--encre-300);
+  --text-on-accent: var(--encre-950);
+
+  --surface-page: var(--papier-100);
+  --surface-page-alt: var(--papier-300);
+  --surface-card: var(--white);
+  --surface-sunken: var(--papier-500);
+  --surface-dark: var(--encre-950);
+  --surface-dark-alt: var(--encre-900);
+  --surface-accent: var(--or-500);
+  --surface-danger: var(--rouge-100);
+
+  --border-strong: var(--encre-950);
+  --border-default: var(--encre-200);
+  --border-subtle: var(--encre-100);
+  --border-on-dark: rgba(255, 255, 255, 0.12);
+  --border-gold: var(--or-500);
+
+  --focus-ring: var(--or-400);
+}

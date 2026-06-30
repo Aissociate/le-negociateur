@@ -1,0 +1,7 @@
+<svg width="280" height="48" viewBox="0 0 280 48" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Le Négociateur">
+  <rect width="48" height="48" rx="11" fill="#16130D"></rect>
+  <rect x="10.5" y="27" width="7" height="10.5" rx="2.2" fill="#948876"></rect>
+  <rect x="20.5" y="19.5" width="7" height="18" rx="2.2" fill="#D6A24E"></rect>
+  <rect x="30.5" y="10" width="7" height="27.5" rx="2.2" fill="#C2872E"></rect>
+  <text x="62" y="31" font-family="&#39;Bricolage Grotesque&#39;,&#39;Archivo&#39;,sans-serif" font-size="24" font-weight="700" letter-spacing="-0.02em" fill="#16130D">Le Négociateur</text>
+</svg>

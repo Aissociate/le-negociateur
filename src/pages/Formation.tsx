@@ -6,9 +6,11 @@ import {
 import Layout from '../components/Layout';
 import { callFunction } from '../lib/supabase';
 
-// URL d'intégration de la vidéo de présentation (YouTube/Vimeo embed ou .mp4).
-// Tant qu'elle est vide, un emplacement « placeholder » est affiché.
-const VIDEO_URL = import.meta.env.VITE_FORMATION_VIDEO_URL as string | undefined;
+// Vidéo de présentation. Par défaut : le film HTML animé (export Claude Design)
+// déposé dans public/formation-film/. VITE_FORMATION_VIDEO_URL=off pour le couper,
+// ou une URL (embed YouTube/Vimeo, .mp4, ou autre film) pour le remplacer.
+const filmEnv = import.meta.env.VITE_FORMATION_VIDEO_URL as string | undefined;
+const VIDEO_URL = filmEnv === 'off' ? undefined : filmEnv || '/formation-film/Formation-IA-Video.dc.html';
 
 // ⚠️ Témoignages ILLUSTRATIFS — à remplacer par de VRAIS avis avant production
 // (honnêteté publicitaire, cf. CONFORMITE.md). De même, les mentions Qualiopi /
