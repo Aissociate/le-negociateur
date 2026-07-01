@@ -180,12 +180,18 @@ async function fulfillFunnelOrder(session: Stripe.Checkout.Session) {
     await supabase.from('leads').update({ statut: 'client', next_email_at: null }).eq('id', lead.id);
   }
 
-  // 4. Kit baseline si la commande contient le Kit (le profil détaillé l'enrichira
-  //    ensuite via personalize-kit). Idempotent : un seul livrable par commande.
+  // 4. Livrable à générer : le Kit (kit_offensif) OU l'Argumentaire Éclair (downsell).
+  //    Idempotent : un seul livrable par commande.
   const slugs: string[] = order.product_slugs ?? [];
   const { data: products } = await supabase.from('products').select('slug, kind').in('slug', slugs);
   const hasKit = (products ?? []).some((p) => p.slug === 'kit' || p.kind === 'kit');
-  if (!hasKit) return;
+  const hasEclair = slugs.includes('argumentaire-eclair');
+  const toGen = hasKit
+    ? { agent: 'kit_offensif', type: 'kit_offensif', label: 'Kit de Négociation' }
+    : hasEclair
+    ? { agent: 'argumentaire_eclair', type: 'argumentaire_eclair', label: 'Argumentaire Éclair' }
+    : null;
+  if (!toGen) return;
 
   const { data: existing } = await supabase
     .from('deliverables')
@@ -195,33 +201,33 @@ async function fulfillFunnelOrder(session: Stripe.Checkout.Session) {
   if (existing) return;
 
   try {
-    const { text } = await callLLM(supabase, 'kit_offensif', baseKitVars(report, lead));
+    const { text } = await callLLM(supabase, toGen.agent, baseKitVars(report, lead));
     const token = crypto.randomUUID().replaceAll('-', '') + crypto.randomUUID().replaceAll('-', '');
     await supabase.from('deliverables').insert({
       order_id: order.id,
       lead_id: lead?.id ?? null,
-      type: 'kit_offensif',
+      type: toGen.type,
       content_md: text,
       access_token: token,
     });
-    console.info(`Kit baseline généré pour la commande ${order.id}`);
+    console.info(`${toGen.label} généré pour la commande ${order.id}`);
 
-    // Email de livraison : lien du Kit (+ accès entraînement IA si l'upsell a été pris).
+    // Email de livraison : lien du document (+ accès entraînement IA si l'upsell a été pris).
     try {
       const siteUrl = Deno.env.get('SITE_URL') ?? 'http://localhost:5173';
-      const kitUrl = `${siteUrl}/kit/document/${token}`;
+      const docUrl = `${siteUrl}/kit/document/${token}`;
       const hasSimulateur = (products ?? []).some((p) => p.slug === 'simulateur');
       const trainingBlock = hasSimulateur
         ? `<p>Tu as aussi débloqué l'<strong>entraînement IA à la négociation</strong> : <a href="${siteUrl}/simulateur">démarrer une session</a>.</p>`
         : '';
       await sendEmail(
         order.email,
-        'Ton Kit de Négociation est prêt 🎯',
+        `Ton ${toGen.label} est prêt 🎯`,
         `<div style="font-family:system-ui,sans-serif;font-size:15px;line-height:1.6;color:#1a1a1a">
           <p>Bonjour,</p>
-          <p>Merci pour ta confiance — ton <strong>Kit de Négociation personnalisé</strong> est prêt.</p>
+          <p>Merci pour ta confiance — ton <strong>${toGen.label} personnalisé</strong> est prêt.</p>
           <p style="margin:24px 0">
-            <a href="${kitUrl}" style="background:#c8a24a;color:#1a1a1a;font-weight:bold;padding:12px 22px;border-radius:8px;text-decoration:none">Accéder à mon Kit</a>
+            <a href="${docUrl}" style="background:#c8a24a;color:#1a1a1a;font-weight:bold;padding:12px 22px;border-radius:8px;text-decoration:none">Accéder à mon document</a>
           </p>
           ${trainingBlock}
           <p>Tu peux retrouver tes accès à tout moment depuis ton <a href="${siteUrl}/compte">espace personnel</a>.</p>

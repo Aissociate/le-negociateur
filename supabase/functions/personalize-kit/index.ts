@@ -22,6 +22,17 @@ Deno.serve(async (req) => {
     if (!order) return json({ error: 'Commande introuvable.' }, 404);
     if (order.status !== 'paid') return json({ error: 'Commande non payée.' }, 403);
 
+    // Seules les commandes contenant le Kit se personnalisent. Sinon (ex. Argumentaire
+    // Éclair via exit-intent), on renvoie le livrable existant sans régénérer un Kit complet.
+    if (!((order.product_slugs as string[] | null) ?? []).includes('kit')) {
+      const { data: existing } = await db
+        .from('deliverables')
+        .select('access_token')
+        .eq('order_id', order.id)
+        .maybeSingle();
+      return json({ token: existing?.access_token ?? null });
+    }
+
     const { data: lead } = order.lead_id
       ? await db.from('leads').select('*').eq('id', order.lead_id).maybeSingle()
       : await db.from('leads').select('*').eq('email', order.email).maybeSingle();
