@@ -4,6 +4,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
 import { baseKitVars } from '../_shared/kit.ts';
 import { callLLM } from '../_shared/llm.ts';
 import { sendEmail } from '../_shared/email.ts';
+import { sendMetaPurchase } from '../_shared/meta.ts';
 
 const stripeSecret = Deno.env.get('STRIPE_SECRET_KEY')!;
 const stripeWebhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET')!;
@@ -163,6 +164,22 @@ async function fulfillFunnelOrder(session: Stripe.Checkout.Session) {
       .from('orders')
       .update({ status: 'paid', paid_at: new Date().toISOString(), stripe_customer_id: customerId })
       .eq('id', order.id);
+
+    // Conversion server-side (Meta CAPI) — fiable même si le navigateur ne recharge pas
+    // /merci. Dédupliqué avec le pixel via event_id = id de session Stripe. N'envoyé
+    // qu'une fois : au rejeu Stripe, la commande est déjà 'paid' et on ne repasse pas ici.
+    try {
+      const site = Deno.env.get('SITE_URL') ?? '';
+      await sendMetaPurchase({
+        eventId: sessionId,
+        email: order.email,
+        value: (session.amount_total ?? 0) / 100,
+        currency: session.currency ?? 'eur',
+        eventSourceUrl: site ? `${site}/merci?session_id=${sessionId}` : undefined,
+      });
+    } catch (capiErr) {
+      console.error('Meta CAPI Purchase échoué :', capiErr);
+    }
   } else if (customerId && !order.stripe_customer_id) {
     await supabase.from('orders').update({ stripe_customer_id: customerId }).eq('id', order.id);
   }

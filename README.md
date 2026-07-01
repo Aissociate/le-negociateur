@@ -50,6 +50,7 @@ npm run dev
    - `BREVO_API_KEY` (clé API v3 « xkeysib-… », pas la clé SMTP), `EMAIL_FROM`
    - `APIFY_API_KEY`, `APIFY_APOLLO_ACTOR` — agent de prospection
    - `FT_CLIENT_ID`, `FT_CLIENT_SECRET`, `FT_SCOPE`, `FT_MARCHE_TRAVAIL_URL` — France Travail (optionnel, agrégation salaires)
+   - `META_CAPI_TOKEN` — Conversions API Meta (optionnel) : envoie l'achat côté serveur depuis `stripe-webhook`, dédupliqué avec le pixel navigateur (`event_id` = id de session Stripe). `META_PIXEL_ID` optionnel (défaut : pixel du site).
    - `SITE_URL` — URL publique du site
 5. Activer les crons : exécuter `supabase/cron.sql` (remplacer les 2 placeholders).
 
