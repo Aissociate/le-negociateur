@@ -16,7 +16,9 @@ export default function Compte() {
   const [session, setSession] = useState<any>(null);
   const [ready, setReady] = useState(false);
   const [email, setEmail] = useState('');
-  const [sent, setSent] = useState(false);
+  const [code, setCode] = useState('');
+  const [phase, setPhase] = useState<'email' | 'code'>('email');
+  const [sending, setSending] = useState(false);
   const [data, setData] = useState<AccountData | null>(null);
   const [err, setErr] = useState('');
 
@@ -39,15 +41,24 @@ export default function Compte() {
       .catch((e) => setErr(e instanceof Error ? e.message : 'Erreur'));
   }, [session]);
 
-  async function sendLink(e: React.FormEvent) {
-    e.preventDefault();
+  async function sendCode(e?: React.FormEvent) {
+    e?.preventDefault();
     setErr('');
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: window.location.origin + '/compte' },
-    });
+    setSending(true);
+    const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
+    setSending(false);
     if (error) setErr(error.message);
-    else setSent(true);
+    else setPhase('code');
+  }
+
+  async function verifyCode(e?: React.FormEvent) {
+    e?.preventDefault();
+    setErr('');
+    setSending(true);
+    const { error } = await supabase.auth.verifyOtp({ email, token: code.trim(), type: 'email' });
+    setSending(false);
+    if (error) setErr('Code invalide ou expiré. Réessaie ou renvoie un code.');
+    // Succès : onAuthStateChange met à jour la session automatiquement.
   }
 
   async function manageSub() {
@@ -67,26 +78,56 @@ export default function Compte() {
       <Layout narrow>
         <div className="max-w-sm mx-auto py-12">
           <h1 className="font-display text-2xl font-bold text-center mb-2">Mon espace</h1>
-          <p className="text-paper/60 text-sm text-center mb-6">
-            Connecte-toi avec l'email de ton achat — on t'envoie un lien magique, sans mot de passe.
-          </p>
-          {sent ? (
-            <p className="text-gold text-center">Lien envoyé ✦ vérifie ta boîte mail.</p>
+          {phase === 'email' ? (
+            <>
+              <p className="text-paper/60 text-sm text-center mb-6">
+                Connecte-toi avec l'email de ton achat — on t'envoie un <strong className="text-paper">code à 6 chiffres</strong>.
+              </p>
+              <form onSubmit={sendCode} className="space-y-3">
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="ton@email.fr"
+                  className="w-full rounded-lg bg-ink border border-white/15 px-4 py-3 focus:border-gold focus:outline-none"
+                />
+                {err && <p className="text-ember text-sm">{err}</p>}
+                <button disabled={sending} className="w-full bg-gold text-ink font-bold py-3 rounded-lg hover:brightness-105 transition disabled:opacity-60">
+                  {sending ? 'Envoi…' : 'Recevoir mon code'}
+                </button>
+              </form>
+            </>
           ) : (
-            <form onSubmit={sendLink} className="space-y-3">
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="ton@email.fr"
-                className="w-full rounded-lg bg-ink border border-white/15 px-4 py-3 focus:border-gold focus:outline-none"
-              />
-              {err && <p className="text-ember text-sm">{err}</p>}
-              <button className="w-full bg-gold text-ink font-bold py-3 rounded-lg hover:brightness-105 transition">
-                Recevoir mon lien de connexion
-              </button>
-            </form>
+            <>
+              <p className="text-paper/60 text-sm text-center mb-6">
+                On a envoyé un code à 6 chiffres à <strong className="text-paper">{email}</strong>. Saisis-le ci-dessous.
+              </p>
+              <form onSubmit={verifyCode} className="space-y-3">
+                <input
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  required
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, ''))}
+                  placeholder="••••••"
+                  className="w-full text-center tracking-[0.5em] font-mono text-xl rounded-lg bg-ink border border-white/15 px-4 py-3 focus:border-gold focus:outline-none"
+                />
+                {err && <p className="text-ember text-sm">{err}</p>}
+                <button disabled={sending || code.length < 6} className="w-full bg-gold text-ink font-bold py-3 rounded-lg hover:brightness-105 transition disabled:opacity-60">
+                  {sending ? 'Connexion…' : 'Se connecter'}
+                </button>
+              </form>
+              <div className="mt-3 flex justify-between text-xs text-paper/40">
+                <button onClick={() => { setPhase('email'); setCode(''); setErr(''); }} className="hover:text-paper">
+                  ← Changer d'email
+                </button>
+                <button onClick={() => sendCode()} disabled={sending} className="hover:text-paper disabled:opacity-50">
+                  Renvoyer un code
+                </button>
+              </div>
+            </>
           )}
         </div>
       </Layout>
