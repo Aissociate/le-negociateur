@@ -6,6 +6,7 @@ import { serviceClient } from '../_shared/db.ts';
 import { handleOptions, json } from '../_shared/cors.ts';
 import { callLLM } from '../_shared/llm.ts';
 import { detailedKitVars } from '../_shared/kit.ts';
+import { sendEmail } from '../_shared/email.ts';
 
 Deno.serve(async (req) => {
   const options = handleOptions(req);
@@ -77,6 +78,32 @@ Deno.serve(async (req) => {
     }
 
     if (lead) await db.from('leads').update({ statut: 'client', next_email_at: null }).eq('id', lead.id);
+
+    // Email de livraison du Kit (généré à partir du Formulaire 2). Best-effort.
+    try {
+      const siteUrl = Deno.env.get('SITE_URL') ?? 'http://localhost:5173';
+      const kitUrl = `${siteUrl}/kit/document/${token}`;
+      const hasSimulateur = ((order.product_slugs as string[] | null) ?? []).includes('simulateur');
+      const trainingBlock = hasSimulateur
+        ? `<p>Tu as aussi débloqué l'<strong>entraînement IA à la négociation</strong> : <a href="${siteUrl}/simulateur">démarrer une session</a>.</p>`
+        : '';
+      await sendEmail(
+        order.email,
+        'Ton Kit de Négociation est prêt 🎯',
+        `<div style="font-family:system-ui,sans-serif;font-size:15px;line-height:1.6;color:#1a1a1a">
+          <p>Bonjour,</p>
+          <p>Ton <strong>Kit de Négociation personnalisé</strong> est prêt.</p>
+          <p style="margin:24px 0">
+            <a href="${kitUrl}" style="background:#c8a24a;color:#1a1a1a;font-weight:bold;padding:12px 22px;border-radius:8px;text-decoration:none">Accéder à mon Kit</a>
+          </p>
+          ${trainingBlock}
+          <p>Tu peux retrouver tes accès à tout moment depuis ton <a href="${siteUrl}/compte">espace personnel</a>.</p>
+          <p>À ta réussite,<br/>L'équipe Le Négociateur</p>
+        </div>`
+      );
+    } catch (mailErr) {
+      console.error('Envoi email de livraison du Kit échoué (Kit créé) :', mailErr);
+    }
 
     return json({ token });
   } catch (err) {

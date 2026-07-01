@@ -180,19 +180,42 @@ async function fulfillFunnelOrder(session: Stripe.Checkout.Session) {
     await supabase.from('leads').update({ statut: 'client', next_email_at: null }).eq('id', lead.id);
   }
 
-  // 4. Livrable à générer : le Kit (kit_offensif) OU l'Argumentaire Éclair (downsell).
-  //    Idempotent : un seul livrable par commande.
+  // 4. Livraison.
+  //    - Le KIT ne se génère PAS ici : il vient du Formulaire 2 (personalize-kit),
+  //      qui l'alimente avec le profil détaillé. On invite le client à le compléter.
+  //    - L'Argumentaire Éclair (downsell) n'a pas de formulaire : on le génère direct.
   const slugs: string[] = order.product_slugs ?? [];
-  const { data: products } = await supabase.from('products').select('slug, kind').in('slug', slugs);
-  const hasKit = (products ?? []).some((p) => p.slug === 'kit' || p.kind === 'kit');
+  const siteUrl = Deno.env.get('SITE_URL') ?? 'http://localhost:5173';
+  const hasKit = slugs.includes('kit');
   const hasEclair = slugs.includes('argumentaire-eclair');
-  const toGen = hasKit
-    ? { agent: 'kit_offensif', type: 'kit_offensif', label: 'Kit de Négociation' }
-    : hasEclair
-    ? { agent: 'argumentaire_eclair', type: 'argumentaire_eclair', label: 'Argumentaire Éclair' }
-    : null;
-  if (!toGen) return;
 
+  if (hasKit) {
+    try {
+      const formUrl = `${siteUrl}/personnaliser?session=${order.stripe_session_id}`;
+      await sendEmail(
+        order.email,
+        'Paiement confirmé — dernière étape pour ton Kit',
+        `<div style="font-family:system-ui,sans-serif;font-size:15px;line-height:1.6;color:#1a1a1a">
+          <p>Bonjour,</p>
+          <p>Ton paiement est confirmé 🎉</p>
+          <p>Pour générer ton <strong>Kit de Négociation 100 % sur-mesure</strong>, il te reste une étape rapide : compléter ton profil détaillé.</p>
+          <p style="margin:24px 0">
+            <a href="${formUrl}" style="background:#c8a24a;color:#1a1a1a;font-weight:bold;padding:12px 22px;border-radius:8px;text-decoration:none">Compléter mon profil et générer mon Kit</a>
+          </p>
+          <p>Sans cette étape, ton Kit ne peut pas être personnalisé.</p>
+          <p>À ta réussite,<br/>L'équipe Le Négociateur</p>
+        </div>`
+      );
+      console.info(`Email « compléter le profil » envoyé pour la commande ${order.id}`);
+    } catch (mailErr) {
+      console.error('Envoi email « compléter le profil » échoué :', mailErr);
+    }
+    return;
+  }
+
+  if (!hasEclair) return;
+
+  // Argumentaire Éclair : généré directement (aucun formulaire). Idempotent.
   const { data: existing } = await supabase
     .from('deliverables')
     .select('id')
@@ -201,48 +224,38 @@ async function fulfillFunnelOrder(session: Stripe.Checkout.Session) {
   if (existing) return;
 
   try {
-    const { text } = await callLLM(supabase, toGen.agent, baseKitVars(report, lead));
+    const { text } = await callLLM(supabase, 'argumentaire_eclair', baseKitVars(report, lead));
     const token = crypto.randomUUID().replaceAll('-', '') + crypto.randomUUID().replaceAll('-', '');
     await supabase.from('deliverables').insert({
       order_id: order.id,
       lead_id: lead?.id ?? null,
-      type: toGen.type,
+      type: 'argumentaire_eclair',
       content_md: text,
       access_token: token,
     });
-    console.info(`${toGen.label} généré pour la commande ${order.id}`);
+    console.info(`Argumentaire Éclair généré pour la commande ${order.id}`);
 
-    // Email de livraison : lien du document (+ accès entraînement IA si l'upsell a été pris).
     try {
-      const siteUrl = Deno.env.get('SITE_URL') ?? 'http://localhost:5173';
       const docUrl = `${siteUrl}/kit/document/${token}`;
-      const hasSimulateur = (products ?? []).some((p) => p.slug === 'simulateur');
-      const trainingBlock = hasSimulateur
-        ? `<p>Tu as aussi débloqué l'<strong>entraînement IA à la négociation</strong> : <a href="${siteUrl}/simulateur">démarrer une session</a>.</p>`
-        : '';
       await sendEmail(
         order.email,
-        `Ton ${toGen.label} est prêt 🎯`,
+        'Ton Argumentaire Éclair est prêt 🎯',
         `<div style="font-family:system-ui,sans-serif;font-size:15px;line-height:1.6;color:#1a1a1a">
           <p>Bonjour,</p>
-          <p>Merci pour ta confiance — ton <strong>${toGen.label} personnalisé</strong> est prêt.</p>
+          <p>Merci pour ta confiance — ton <strong>Argumentaire Éclair personnalisé</strong> est prêt.</p>
           <p style="margin:24px 0">
             <a href="${docUrl}" style="background:#c8a24a;color:#1a1a1a;font-weight:bold;padding:12px 22px;border-radius:8px;text-decoration:none">Accéder à mon document</a>
           </p>
-          ${trainingBlock}
           <p>Tu peux retrouver tes accès à tout moment depuis ton <a href="${siteUrl}/compte">espace personnel</a>.</p>
           <p>À ta réussite,<br/>L'équipe Le Négociateur</p>
         </div>`
       );
       console.info(`Email de livraison envoyé pour la commande ${order.id}`);
     } catch (mailErr) {
-      // Le Kit existe et reste accessible (page Merci / espace client) : on ne bloque pas.
-      console.error('Envoi email de livraison échoué (Kit créé) :', mailErr);
+      console.error('Envoi email de livraison échoué (Éclair créé) :', mailErr);
     }
   } catch (err) {
-    // La commande reste payée : on ne perd pas la vente. Le Kit pourra être régénéré
-    // (personalize-kit) ou rejoué via un nouvel événement.
-    console.error('Génération du Kit baseline échouée (commande payée) :', err);
+    console.error("Génération de l'Argumentaire Éclair échouée (commande payée) :", err);
   }
 }
 
