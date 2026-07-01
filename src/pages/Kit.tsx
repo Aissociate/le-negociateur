@@ -8,6 +8,7 @@ import { Product } from '../types';
 import { TESTIMONIALS } from '../lib/testimonials';
 import { SOCIAL_PROOF, SOCIAL_PROOF_MIN_COUNT } from '../lib/cro';
 import { useAnalysesCount } from '../lib/useAnalysesCount';
+import { trackEvent } from '../lib/pixel';
 
 const euros = (cents: number) => (cents / 100).toLocaleString('fr-FR') + ' €';
 
@@ -190,6 +191,20 @@ export default function Kit() {
   const simu = p('simulateur');
   const eclair = p('argumentaire-eclair');
 
+  // Conversion funnel : vue de l'offre (une fois le Kit chargé) — sert au retargeting.
+  const viewTracked = useRef(false);
+  useEffect(() => {
+    if (viewTracked.current || !kit) return;
+    viewTracked.current = true;
+    trackEvent('ViewContent', {
+      content_name: kit.name,
+      content_ids: [kit.slug],
+      content_type: 'product',
+      value: kit.price_cents / 100,
+      currency: 'EUR',
+    });
+  }, [kit]);
+
   async function checkout(slugs: string[]) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setError('Entre ton email (celui de ton analyse) pour continuer.');
@@ -198,6 +213,15 @@ export default function Kit() {
     }
     setLoading(true);
     setError('');
+    // Conversion funnel : départ du paiement (valeur = somme des produits choisis).
+    const items = slugs.map(p).filter(Boolean) as Product[];
+    trackEvent('InitiateCheckout', {
+      value: items.reduce((sum, it) => sum + it.price_cents, 0) / 100,
+      currency: 'EUR',
+      content_ids: slugs,
+      content_name: items.map((it) => it.name).join(' + '),
+      num_items: items.length,
+    });
     try {
       const { url } = await callFunction<{ url: string }>('create-checkout', { email, product_slugs: slugs });
       window.location.href = url;

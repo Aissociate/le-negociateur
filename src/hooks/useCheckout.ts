@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import type { StripeProduct } from '../stripe-config';
+import { trackEvent } from '../lib/pixel';
 
 interface CheckoutOptions {
   product: StripeProduct;
@@ -16,6 +17,14 @@ export function useCheckout() {
   async function startCheckout({ product, successUrl, cancelUrl, metadata }: CheckoutOptions) {
     setLoading(true);
     setError(null);
+
+    // Conversion funnel : départ du paiement.
+    trackEvent('InitiateCheckout', {
+      value: product.price,
+      currency: product.currency.toUpperCase(),
+      content_name: product.name,
+      content_ids: [product.priceId],
+    });
 
     try {
       const origin = window.location.origin;

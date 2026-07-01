@@ -1,6 +1,7 @@
 import { Suspense, lazy } from 'react';
 import { Routes, Route, Link } from 'react-router-dom';
 import Layout from './components/Layout';
+import PixelTracker from './components/PixelTracker';
 import Landing from './pages/Landing';
 import Questionnaire from './pages/Questionnaire';
 import Reveal from './pages/Reveal';
@@ -48,6 +49,7 @@ function NotFound() {
 export default function App() {
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-paper/40">…</div>}>
+      <PixelTracker />
       <Routes>
         {/* Public */}
         <Route path="/" element={<Landing />} />

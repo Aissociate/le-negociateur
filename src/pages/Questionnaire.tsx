@@ -7,6 +7,7 @@ import { SECTEURS, SENIORITES, LOCALISATIONS } from '../types';
 import { callFunction } from '../lib/supabase';
 import { CAPTURE_EXPERIMENT, assignVariant, trackAB, Variant } from '../lib/ab';
 import { TRUST_BADGES } from '../lib/cro';
+import { trackEvent } from '../lib/pixel';
 
 type Answers = {
   poste: string;
@@ -109,6 +110,8 @@ export default function Questionnaire() {
         ab_variant: variant.key,
       });
       trackAB(CAPTURE_EXPERIMENT.key, variant.key, 'capture');
+      // Conversion funnel : lead capté (email + analyse générée).
+      trackEvent('Lead', { content_name: 'Analyse écart de rémunération' });
       navigate(`/rapport/${report_id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Une erreur est survenue. Réessayez.');

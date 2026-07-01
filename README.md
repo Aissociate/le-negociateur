@@ -42,12 +42,12 @@ npm run dev
    supabase functions deploy rapport-ecart public-data ab-track create-checkout stripe-webhook \
      send-emails update-benchmarks orchestrator prospect-import prospect-ingest prospect-enrich \
      salary-intel-test personalize-kit account-data interview-chat billing-portal \
-     oto-charge oto-subscribe
+     oto-charge oto-subscribe prospect-outreach brevo-webhook
    ```
 4. Renseigner les secrets (Settings → Edge Functions → Secrets) :
    - `OPENROUTER_API_KEY` — IA (modèles réglables dans `/admin/prompts`)
    - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
-   - `RESEND_API_KEY`, `EMAIL_FROM`
+   - `BREVO_API_KEY` (clé API v3 « xkeysib-… », pas la clé SMTP), `EMAIL_FROM`
    - `APIFY_API_KEY`, `APIFY_APOLLO_ACTOR` — agent de prospection
    - `FT_CLIENT_ID`, `FT_CLIENT_SECRET`, `FT_SCOPE`, `FT_MARCHE_TRAVAIL_URL` — France Travail (optionnel, agrégation salaires)
    - `SITE_URL` — URL publique du site

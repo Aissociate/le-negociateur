@@ -1,7 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useOrderBySession } from '../hooks/useOrders';
 import { getProductByPriceId, formatPrice } from '../stripe-config';
+import { trackEvent } from '../lib/pixel';
 
 export default function Merci() {
   const [params] = useSearchParams();
@@ -10,6 +11,23 @@ export default function Merci() {
 
   const amountPaid =
     order?.amount_total != null ? order.amount_total / 100 : null;
+
+  // Conversion funnel : achat confirmé. Déclenché une seule fois, dédupliqué par
+  // session_id (survit à un rafraîchissement de la page de remerciement).
+  const purchaseTracked = useRef(false);
+  useEffect(() => {
+    if (purchaseTracked.current) return;
+    if (!sessionId || !order || order.payment_status !== 'paid') return;
+    const key = `fb_purchase_${sessionId}`;
+    purchaseTracked.current = true;
+    if (localStorage.getItem(key)) return;
+    trackEvent(
+      'Purchase',
+      { value: amountPaid ?? 0, currency: (order.currency ?? 'eur').toUpperCase() },
+      sessionId
+    );
+    localStorage.setItem(key, '1');
+  }, [sessionId, order, amountPaid]);
 
   return (
     <div
