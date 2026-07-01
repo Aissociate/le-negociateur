@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Loader2, Sparkles, Minus, Plus } from 'lucide-react';
 import Layout from '../components/Layout';
@@ -62,6 +62,37 @@ export default function Personnaliser() {
   });
   const [real, setReal] = useState({ reussites: '', evolutions: '', competences: '', objectif: '', confiance: '3', contexte: '' });
 
+  const draftKey = session ? `ln_perso_${session}` : '';
+
+  // Restauration du brouillon (sauvegarde automatique par session) au chargement.
+  useEffect(() => {
+    if (!draftKey) return;
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return;
+      const d = JSON.parse(raw);
+      if (d.emploi) setEmploi(d.emploi);
+      if (d.entreprise) setEntreprise(d.entreprise);
+      if (d.rem) setRem(d.rem);
+      if (d.avantages) setAvantages(d.avantages);
+      if (d.real) setReal(d.real);
+      if (typeof d.step === 'number') setStep(d.step);
+    } catch {
+      /* brouillon illisible : on ignore */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey]);
+
+  // Sauvegarde automatique à chaque changement (reprise possible avec le même lien).
+  useEffect(() => {
+    if (!draftKey) return;
+    try {
+      localStorage.setItem(draftKey, JSON.stringify({ emploi, entreprise, rem, avantages, real, step }));
+    } catch {
+      /* quota / indispo : on ignore */
+    }
+  }, [draftKey, emploi, entreprise, rem, avantages, real, step]);
+
   const setE = (k: keyof typeof emploi, v: string | number | boolean) => setEmploi((s) => ({ ...s, [k]: v }));
   const setC = (k: keyof typeof entreprise, v: string) => setEntreprise((s) => ({ ...s, [k]: v }));
   const setEl = (key: string, patch: Partial<El>) =>
@@ -107,7 +138,8 @@ export default function Personnaliser() {
           throw e;
         }
       }
-      // Les upsells (order bump + formation) ont déjà eu lieu : on remet directement le Kit final.
+      // Kit généré : on efface le brouillon puis on affiche le Kit final.
+      if (draftKey) localStorage.removeItem(draftKey);
       navigate(`/kit/document/${token}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Une erreur est survenue. Réessayez.');
@@ -185,6 +217,9 @@ export default function Personnaliser() {
         </div>
         <p className="mt-2 text-xs text-paper/40">
           Étape {step + 1}/{STEPS.length} — {STEPS[step]}
+        </p>
+        <p className="mt-1 text-[11px] text-paper/30">
+          ✓ Progression sauvegardée automatiquement — tu peux fermer et revenir plus tard avec le même lien.
         </p>
       </div>
 
