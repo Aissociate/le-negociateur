@@ -53,7 +53,7 @@ export default function Merci() {
             ← Retour à l'accueil
           </Link>
           <Link
-            to="/simulateur"
+            to="/compte"
             style={{
               fontSize: 14,
               fontWeight: 700,

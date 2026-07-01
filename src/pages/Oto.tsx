@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Loader2, Check, X, ShieldCheck } from 'lucide-react';
+import { Loader as Loader2, Check, X, ShieldCheck } from 'lucide-react';
 import Layout from '../components/Layout';
 import { supabase, callFunction } from '../lib/supabase';
 import { Product, OtoStep } from '../types';
@@ -22,7 +22,7 @@ export default function Oto() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  const finish = () => navigate(token ? `/kit/document/${token}` : '/compte');
+  const finish = () => navigate('/formation' + (session ? '?session=' + encodeURIComponent(session) : ''));
 
   useEffect(() => {
     if (resume) {
