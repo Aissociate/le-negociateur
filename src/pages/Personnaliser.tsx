@@ -33,6 +33,17 @@ const inputCls =
 
 const STEPS = ['Ton emploi', 'Ton entreprise', 'Ta rémunération', 'Tes avantages', 'Tes réalisations'];
 
+// Messages d'attente pendant la génération (rotation toutes les ~3,5 s).
+const WAIT_MSGS = [
+  'Analyse de ton profil détaillé…',
+  'Consultation des bases de données salariales…',
+  'Croisement avec le marché et les offres réelles…',
+  'Calcul de ton positionnement et de ta fourchette…',
+  'Rédaction de ton argumentaire chiffré…',
+  'Préparation de tes scripts et réponses aux objections…',
+  'Finalisation de ton Kit sur-mesure…',
+];
+
 type El = { on: boolean; montant: string };
 
 export default function Personnaliser() {
@@ -43,6 +54,21 @@ export default function Personnaliser() {
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [elapsed, setElapsed] = useState(0);
+  const [msgIdx, setMsgIdx] = useState(0);
+
+  // Timer + rotation des messages pendant la génération du Kit.
+  useEffect(() => {
+    if (!submitting) return;
+    setElapsed(0);
+    setMsgIdx(0);
+    const t = setInterval(() => setElapsed((s) => s + 1), 1000);
+    const m = setInterval(() => setMsgIdx((i) => (i + 1) % WAIT_MSGS.length), 3500);
+    return () => {
+      clearInterval(t);
+      clearInterval(m);
+    };
+  }, [submitting]);
 
   const [emploi, setEmploi] = useState({
     sexe: '', annee_naissance: '', anciennete_totale: '', anciennete_societe: '', type_contrat: '',
@@ -200,6 +226,30 @@ export default function Personnaliser() {
       </div>
     </div>
   );
+
+  if (submitting) {
+    const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
+    const ss = String(elapsed % 60).padStart(2, '0');
+    return (
+      <Layout narrow>
+        <div className="text-center py-16 max-w-md mx-auto">
+          <Loader2 className="w-10 h-10 text-gold animate-spin mx-auto mb-6" />
+          <h1 className="font-display text-2xl font-bold mb-3">Génération de ton Kit sur-mesure</h1>
+          <p className="text-gold font-medium min-h-[1.5rem]">{WAIT_MSGS[msgIdx]}</p>
+          <p className="font-mono text-4xl font-bold text-paper mt-6 tabular-nums">{mm}:{ss}</p>
+          <p className="text-paper/55 text-sm mt-5 leading-relaxed">
+            Un Kit vraiment personnalisé et performant demande un peu de temps : on croise ton profil avec les
+            données du marché, on calcule ton positionnement et on rédige ton argumentaire chiffré.
+            <br />
+            <strong className="text-paper/80">Ne ferme pas cette page.</strong>
+          </p>
+          <div className="mt-6 h-1.5 bg-white/10 rounded-full overflow-hidden">
+            <div className="h-full w-full bg-gold/60 animate-pulse" />
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout narrow>
