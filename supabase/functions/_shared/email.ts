@@ -3,7 +3,7 @@
 // EMAIL_FROM au format « Nom <email@domaine> » — l'expéditeur doit être vérifié dans Brevo.
 
 export async function sendEmail(to: string, subject: string, html: string): Promise<void> {
-  const from = Deno.env.get('EMAIL_FROM') ?? 'Le Négociateur <contact@le-negociateur.fr>';
+  const from = Deno.env.get('EMAIL_FROM') ?? 'Le Négociateur <lenegociateur@aissociate.re>';
   const m = from.match(/^\s*(.*?)\s*<([^>]+)>\s*$/);
   const sender = m ? { name: m[1] || undefined, email: m[2] } : { email: from.trim() };
 
