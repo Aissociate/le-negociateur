@@ -35,7 +35,8 @@ export default function Formation() {
   const [busy, setBusy] = useState<null | 'oui' | 'non'>(null);
 
   function next() {
-    navigate(`/merci${session ? `?session_id=${encodeURIComponent(session)}` : ''}`);
+    // Après la formation (cross-sell), on route vers le Formulaire 2 qui alimente le Kit.
+    navigate(`/personnaliser${session ? `?session=${encodeURIComponent(session)}` : ''}`);
   }
 
   async function choose(interested: boolean) {
