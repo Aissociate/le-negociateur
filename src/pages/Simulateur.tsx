@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Send, Mic, Loader2, RotateCcw, Award } from 'lucide-react';
 import Layout from '../components/Layout';
-import { supabase, callAuthFunction } from '../lib/supabase';
+import { supabase, callAuthFunction, callFunction } from '../lib/supabase';
 
 type Msg = { role: 'user' | 'assistant'; content: string };
 type Persona = { key: string; label: string; prompt: string };
@@ -15,6 +15,8 @@ const FALLBACK_PERSONA: Persona = {
 
 export default function Simulateur() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const acces = params.get('acces') ?? '';
   const [authChecked, setAuthChecked] = useState(false);
   const [allowed, setAllowed] = useState(false);
   const [personas, setPersonas] = useState<Persona[]>([]);
@@ -29,6 +31,14 @@ export default function Simulateur() {
   const recRef = useRef<any>(null);
 
   useEffect(() => {
+    // Accès direct par token (lien email) : pas de login requis.
+    if (acces) {
+      callFunction<{ entitlements: { simulator: boolean } }>('account-data', { token: acces })
+        .then((acc) => setAllowed(acc.entitlements.simulator))
+        .catch(() => setAllowed(false))
+        .finally(() => setAuthChecked(true));
+      return;
+    }
     supabase.auth.getSession().then(async ({ data }) => {
       if (!data.session) {
         navigate('/compte');
@@ -42,7 +52,7 @@ export default function Simulateur() {
       }
       setAuthChecked(true);
     });
-  }, [navigate]);
+  }, [navigate, acces]);
 
   useEffect(() => {
     supabase
@@ -68,10 +78,9 @@ export default function Simulateur() {
     setErr('');
     setMessages(visible);
     try {
-      const { reply } = await callAuthFunction<{ reply: string }>('interview-chat', {
-        messages: history,
-        persona: persona.prompt,
-      });
+      const { reply } = acces
+        ? await callFunction<{ reply: string }>('interview-chat', { messages: history, persona: persona.prompt, token: acces })
+        : await callAuthFunction<{ reply: string }>('interview-chat', { messages: history, persona: persona.prompt });
       setMessages([...visible, { role: 'assistant', content: reply }]);
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Erreur');

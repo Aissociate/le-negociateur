@@ -6,6 +6,7 @@ import { serviceClient } from '../_shared/db.ts';
 import { handleOptions, json } from '../_shared/cors.ts';
 import { getUserEmail } from '../_shared/auth.ts';
 import { getEntitlements } from '../_shared/entitlements.ts';
+import { emailFromToken } from '../_shared/access.ts';
 import { callLLMChat, ChatMessage } from '../_shared/llm.ts';
 import { profileToText } from '../_shared/kit.ts';
 
@@ -13,16 +14,18 @@ Deno.serve(async (req) => {
   const options = handleOptions(req);
   if (options) return options;
 
-  const email = await getUserEmail(req);
-  if (!email) return json({ error: 'Non authentifié.' }, 401);
-
   const db = serviceClient();
-  const ent = await getEntitlements(db, email);
-  if (!ent.simulator) return json({ error: 'Accès au simulateur inactif.' }, 403);
 
   // deno-lint-ignore no-explicit-any
-  const { messages, persona } = (await req.json()) as { messages: any[]; persona?: string };
+  const { messages, persona, token } = (await req.json()) as { messages: any[]; persona?: string; token?: string };
   if (!Array.isArray(messages)) return json({ error: 'messages requis.' }, 400);
+
+  // Accès par token de capacité (lien direct) OU par session auth.
+  const email = token ? await emailFromToken(db, token) : await getUserEmail(req);
+  if (!email) return json({ error: 'Non authentifié.' }, 401);
+
+  const ent = await getEntitlements(db, email);
+  if (!ent.simulator) return json({ error: 'Accès au simulateur inactif.' }, 403);
 
   // Contexte client : dernier rapport + dernier profil détaillé
   const { data: lead } = await db.from('leads').select('*').eq('email', email).maybeSingle();

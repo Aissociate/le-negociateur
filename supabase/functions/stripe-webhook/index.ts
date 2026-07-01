@@ -246,7 +246,7 @@ async function fulfillFunnelOrder(session: Stripe.Checkout.Session) {
           <p style="margin:24px 0">
             <a href="${docUrl}" style="background:#c8a24a;color:#1a1a1a;font-weight:bold;padding:12px 22px;border-radius:8px;text-decoration:none">Accéder à mon document</a>
           </p>
-          <p>Tu peux retrouver tes accès à tout moment depuis ton <a href="${siteUrl}/compte">espace personnel</a>.</p>
+          <p>Tu peux retrouver tes accès à tout moment depuis ton <a href="${siteUrl}/compte?acces=${token}">espace personnel</a> — sans code, en un clic.</p>
           <p>À ta réussite,<br/>L'équipe Le Négociateur</p>
         </div>`
       );

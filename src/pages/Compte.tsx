@@ -1,8 +1,8 @@
 import { ReactNode, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { FileText, Receipt, Bot, Repeat, LogOut, Loader2 } from 'lucide-react';
 import Layout from '../components/Layout';
-import { supabase, callAuthFunction } from '../lib/supabase';
+import { supabase, callAuthFunction, callFunction } from '../lib/supabase';
 
 interface AccountData {
   email: string;
@@ -21,6 +21,8 @@ export default function Compte() {
   const [sending, setSending] = useState(false);
   const [data, setData] = useState<AccountData | null>(null);
   const [err, setErr] = useState('');
+  const [params] = useSearchParams();
+  const acces = params.get('acces') ?? '';
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -31,15 +33,23 @@ export default function Compte() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  // Accès direct par token de capacité (lien reçu par email) — sans login ni code.
+  useEffect(() => {
+    if (!acces) return;
+    callFunction<AccountData>('account-data', { token: acces })
+      .then(setData)
+      .catch(() => setErr('Lien d’accès invalide ou expiré. Connecte-toi avec ton email ci-dessous.'));
+  }, [acces]);
+
   useEffect(() => {
     if (!session) {
-      setData(null);
+      if (!acces) setData(null); // en accès token, on garde les données chargées
       return;
     }
     callAuthFunction<AccountData>('account-data', {})
       .then(setData)
       .catch((e) => setErr(e instanceof Error ? e.message : 'Erreur'));
-  }, [session]);
+  }, [session, acces]);
 
   async function sendCode(e?: React.FormEvent) {
     e?.preventDefault();
@@ -71,9 +81,10 @@ export default function Compte() {
     }
   }
 
-  if (!ready) return <Layout narrow><p className="text-center py-16 text-paper/40">…</p></Layout>;
+  if (!ready && !acces) return <Layout narrow><p className="text-center py-16 text-paper/40">…</p></Layout>;
 
-  if (!session) {
+  // Ni session ni accès token valide → écran de connexion par code.
+  if (!session && !data && (!acces || err)) {
     return (
       <Layout narrow>
         <div className="max-w-sm mx-auto py-12">
@@ -139,11 +150,13 @@ export default function Compte() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="font-display text-2xl font-bold">Mon espace</h1>
-          <p className="text-paper/50 text-sm">{data?.email ?? session.user?.email}</p>
+          <p className="text-paper/50 text-sm">{data?.email ?? session?.user?.email}</p>
         </div>
-        <button onClick={() => supabase.auth.signOut()} className="text-sm text-paper/50 flex items-center gap-1 hover:text-paper">
-          <LogOut className="w-4 h-4" /> Déconnexion
-        </button>
+        {session && (
+          <button onClick={() => supabase.auth.signOut()} className="text-sm text-paper/50 flex items-center gap-1 hover:text-paper">
+            <LogOut className="w-4 h-4" /> Déconnexion
+          </button>
+        )}
       </div>
 
       {err && <p className="text-ember text-sm mb-4">{err}</p>}
@@ -154,7 +167,7 @@ export default function Compte() {
         <div className="space-y-5">
           <Section icon={<Bot className="w-5 h-5 text-gold" />} title="Agent Recruteur IA">
             {data.entitlements.simulator ? (
-              <Link to="/simulateur" className="inline-block bg-gold text-ink font-bold px-5 py-2.5 rounded-lg hover:brightness-105 transition">
+              <Link to={`/simulateur${acces ? `?acces=${acces}` : ''}`} className="inline-block bg-gold text-ink font-bold px-5 py-2.5 rounded-lg hover:brightness-105 transition">
                 Lancer l'entraînement →
               </Link>
             ) : (

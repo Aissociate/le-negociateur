@@ -5,15 +5,18 @@ import { serviceClient } from '../_shared/db.ts';
 import { handleOptions, json } from '../_shared/cors.ts';
 import { getUserEmail } from '../_shared/auth.ts';
 import { getEntitlements } from '../_shared/entitlements.ts';
+import { emailFromToken } from '../_shared/access.ts';
 
 Deno.serve(async (req) => {
   const options = handleOptions(req);
   if (options) return options;
 
-  const email = await getUserEmail(req);
-  if (!email) return json({ error: 'Non authentifié.' }, 401);
-
   const db = serviceClient();
+
+  // Accès par token de capacité (lien direct email, sans login) OU par session admin/auth.
+  const body = await req.json().catch(() => ({} as { token?: string }));
+  const email = body?.token ? await emailFromToken(db, body.token) : await getUserEmail(req);
+  if (!email) return json({ error: 'Non authentifié.' }, 401);
 
   const { data: orders } = await db
     .from('orders')
