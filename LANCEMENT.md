@@ -11,7 +11,7 @@ Coche dans l'ordre. (`[x]` = vérifié, `[ ]` = à faire.)
 *Supabase → Edge Functions → Secrets*
 
 - [ ] `OPENROUTER_API_KEY` (`sk-or-…`) **avec crédit + accès `perplexity/sonar`** — sinon rapport IA, Kit, recherche prospect, relances sur-mesure ne se génèrent pas. ⚠️ c'était le blocage de l'audit.
-- [ ] `RESEND_API_KEY` (`re_…`) + `EMAIL_FROM` avec **domaine vérifié (SPF/DKIM)** — sinon aucun email (livraison Kit, relances, prospection).
+- [ ] `BREVO_API_KEY` (`xkeysib-…`, **clé API v3** — pas la clé SMTP `xsmtpsib-`) + `EMAIL_FROM` avec **expéditeur/domaine vérifié dans Brevo (SPF/DKIM)** — sinon aucun email. *(Option : `BREVO_WEBHOOK_SECRET` pour le suivi ouvertures/clics.)*
 - [ ] `SITE_URL = https://ton-domaine` — sinon liens emails + redirections Stripe cassés.
 - [ ] `STRIPE_SECRET_KEY = sk_live_…` *(posé par Bolt)* + `STRIPE_WEBHOOK_SECRET = whsec_…` **live** (cf. §4).
 - [ ] *(option)* `LAUNCH_DAILY_QUOTA` = quota quotidien Kits au tarif de lancement (défaut 20).
@@ -73,6 +73,6 @@ Coche dans l'ordre. (`[x]` = vérifié, `[ ]` = à faire.)
 ---
 
 ### Les 3 vrais bloqueurs (si tu ne fais que ça)
-1. **Secrets** §0 — surtout `OPENROUTER_API_KEY` (Perplexity + crédit) et Resend.
+1. **Secrets** §0 — surtout `OPENROUTER_API_KEY` (Perplexity + crédit) et `BREVO_API_KEY`.
 2. **Déploiement** §2 — surtout `stripe-webhook` (sinon client qui paie ≠ reçoit son Kit).
 3. **Webhook live** §3.

@@ -308,8 +308,8 @@ export default function Funnel() {
           value={String(emailOpened)}
           sub={emailsSent ? `≈ ${pct(emailOpened, emailsSent)} des envois` : 'webhook Resend'}
         />
-        <Kpi label="Clics email" value={String(emailClicked)} sub="webhook Resend" />
-        <Kpi label="Bounces" value={String(emailBounced)} sub="webhook Resend" />
+        <Kpi label="Clics email" value={String(emailClicked)} sub="webhook Brevo" />
+        <Kpi label="Bounces" value={String(emailBounced)} sub="webhook Brevo" />
         <Kpi label="Relances envoyées" value={String(emailsSent)} sub="email_events" />
       </div>
 
