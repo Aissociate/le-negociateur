@@ -25,7 +25,7 @@ export const STRIPE_PRODUCTS: Record<string, StripeProduct> = {
     name: 'Entrainement à la Négociation IA',
     description:
       '🎭 Plusieurs personas de recruteur — tu choisis ton « manager » (direct/factuel attaché au budget, etc.) avant de lancer. 💬 Entretien réaliste mené par l\'IA — elle joue le recruteur, connaît ta situation (issue de ton analyse) et mène la discussion. 🎙️ Réponse à l\'écrit ou à la voix — reconnaissance vocale intégrée (Chrome). 🏆 Débrief + note sur 10 — bouton « Demander un débrief » : analyse de ta performance et scoring. ♾️ Illimité — tu recommences autant de fois que tu veux jusqu\'à être à l\'aise.',
-    price: 19,
+    price: 24,
     currency: 'eur',
     mode: 'payment',
   },
@@ -35,7 +35,7 @@ export const STRIPE_PRODUCTS: Record<string, StripeProduct> = {
     name: 'Kit de Négociation',
     description:
       "Tout ce qu'il te faut pour transformer ton écart de salaire en augmentation réelle. Généré à partir de ton analyse, le Kit te donne : ton argumentaire chiffré personnalisé, ta stratégie en 5 étapes, tes scripts mot à mot (demande, chiffre, silence, conclusion), tes réponses aux 12 objections les plus fréquentes, ton plan B hors salaire + ton email de verrouillage.",
-    price: 49,
+    price: 99,
     currency: 'eur',
     mode: 'payment',
   },

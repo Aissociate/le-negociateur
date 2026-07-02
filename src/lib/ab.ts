@@ -23,7 +23,7 @@ export const CAPTURE_EXPERIMENT: Experiment = {
   variants: [
     {
       key: 'patron',
-      weight: 1,
+      weight: 0, // parkée : remplacée par 'centime' (même angle asymétrie, plus incisif)
       content: {
         headline: 'Es-tu assez payé pour ce que tu sais faire ?',
         subhead:
@@ -45,7 +45,7 @@ export const CAPTURE_EXPERIMENT: Experiment = {
     },
     {
       key: 'argent',
-      weight: 1,
+      weight: 0, // parkée : remplacée par 'voiture' (même angle manque à gagner, plus incisif)
       content: {
         headline: 'Combien laisses-tu sur la table chaque année ?',
         subhead:
@@ -56,7 +56,7 @@ export const CAPTURE_EXPERIMENT: Experiment = {
     },
     {
       key: 'tension',
-      weight: 1,
+      weight: 0, // parkée : remplacée par 'tension_force' (même angle, plus incisif)
       content: {
         headline: 'Ton métier est en tension. Ton salaire le reflète-t-il ?',
         subhead:
@@ -74,6 +74,73 @@ export const CAPTURE_EXPERIMENT: Experiment = {
           'La différence entre ceux qui obtiennent une hausse et les autres ? La méthode et les données. Commence par les tiennes.',
         cta: 'Obtenir mes chiffres',
         reassurance: 'Gratuit · sourcé · sans engagement',
+      },
+    },
+    // --- Hooks direct-response ajoutés (charte réécriture, juillet 2026) ---
+    {
+      key: 'centime',
+      weight: 1,
+      content: {
+        headline: 'Ton employeur connaît ta valeur au centime près. Toi, tu la devines.',
+        subhead:
+          "En 30 secondes, découvre l'écart exact entre ton salaire et le marché. Chiffré, sourcé, impossible à balayer d'un « ce n'est pas le moment ».",
+        cta: 'Révéler mon écart de salaire',
+        reassurance: 'Gratuit · sans inscription · INSEE / France Travail',
+      },
+    },
+    {
+      key: 'voiture',
+      weight: 1,
+      content: {
+        headline: "Un salaire sous le marché, sur 5 ans, c'est une voiture. Neuve.",
+        subhead:
+          "Ton écart ne dort pas : il se cumule chaque année. Mesure-le en 30 secondes, données publiques à l'appui.",
+        cta: 'Calculer mon manque à gagner',
+        reassurance: 'Gratuit · chiffré · sans engagement',
+      },
+    },
+    {
+      key: 'an_prochain',
+      weight: 1,
+      content: {
+        headline: "« Je demanderai l'an prochain » : l'erreur qui coûte le plus cher.",
+        subhead:
+          "Chaque année d'attente, l'écart grossit. Commence par le seul chiffre qui compte vraiment : le tien.",
+        cta: 'Voir mon écart maintenant',
+        reassurance: 'Gratuit · 30 secondes · sans inscription',
+      },
+    },
+    {
+      key: 'verite',
+      weight: 1,
+      content: {
+        headline: 'Une entreprise ne te paie pas ce que tu vaux. Ce que tu acceptes.',
+        subhead:
+          'Tant que tu ne poses aucun chiffre sur la table, tu restes la variable la moins chère. Change de camp en 30 secondes.',
+        cta: 'Poser mon chiffre sur la table',
+        reassurance: 'Gratuit · sourcé INSEE / DARES / APEC · sans engagement',
+      },
+    },
+    {
+      key: 'dernier_arrive',
+      weight: 1,
+      content: {
+        headline: "Le dernier arrivé gagne plus que toi ? Ce n'est peut-être pas un hasard.",
+        subhead:
+          'À poste égal, beaucoup de cadres ignorent où ils se situent face au marché. Sors du flou — il se paie.',
+        cta: 'Voir mon positionnement',
+        reassurance: 'Gratuit · 30 secondes · données publiques',
+      },
+    },
+    {
+      key: 'tension_force',
+      weight: 1,
+      content: {
+        headline: "Ton métier est en tension. Ton salaire, lui, l'a-t-il remarqué ?",
+        subhead:
+          "Quand le marché s'arrache ton profil, le rapport de force change de camp. Encore faut-il pouvoir le chiffrer.",
+        cta: 'Voir ce que vaut mon profil',
+        reassurance: 'Données France Travail / DARES · 30 secondes',
       },
     },
   ],
